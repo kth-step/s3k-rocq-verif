@@ -1,3 +1,3 @@
 -Q theories S3K
 
-theories/S3K/ExecSem/test.v
+theories/ExecSem/test.v
