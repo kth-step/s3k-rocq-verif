@@ -1,0 +1,33 @@
+opam-version: "2.0"
+maintainer: "palmskog@gmail.com"
+version: "dev"
+
+homepage: "https://github.com/kth-step/s3k-rocq-verif"
+dev-repo: "git+https://github.com/kth-step/s3k-rocq-verif.git"
+bug-reports: "https://github.com/kth-step/s3k-rocq-verif/issues"
+license: "BSD-3-Clause"
+
+synopsis: "Executable semantics of S3K"
+description: """
+S3K is an experimental bare-metal capability-based separation kernel for RISC-V.
+This package contains executable semantics of S3K.
+."""
+
+build: [make "-j%{jobs}%"]
+install: [make "install"]
+depends: [
+  "rocq-core" {>= "9.0" & < "9.3"}
+  "rocq-stdlib"
+  "rocq-stdpp" {>= "1.13.0"}
+]
+
+tags: [
+  "category:Computer Science/Data Types and Data Structures"
+  "keyword:S3K"
+  "keyword:separation kernel"
+  "logpath:S3KexecSem"
+]
+authors: [
+  "Hanwen Gu"
+  "Henrik Karlsson"
+]
