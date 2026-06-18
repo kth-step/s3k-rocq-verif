@@ -1,4 +1,4 @@
-From stdpp Require Import propset.
+From stdpp Require Import prelude propset.
 
 Set Implicit Arguments.
 
@@ -14,7 +14,7 @@ Record cap (A : Set) := mk_cap {
 Definition cap_table (A : Set) := list (option (cap A)).
 
 Definition cap_get {A} (ct : cap_table A) (i : nat) : option (cap A) :=
-  match nth_error ct i with
+  match ct !! i with
   | None => None
   | Some v => v
   end.
