@@ -19,6 +19,8 @@ depends: [
   "rocq-core" {>= "9.0" & < "9.3"}
   "rocq-stdlib"
   "rocq-stdpp" {>= "1.13.0"}
+  "coq-record-update" {= "0.3.6"}
+  "compcert-ce" {= "3.17-20260508ce"}
 ]
 
 tags: [
@@ -31,3 +33,6 @@ authors: [
   "Hanwen Gu"
   "Henrik Karlsson"
 ]
+
+# TODO specify tag for compcert-ce
+pin-depends: ["compcert-ce.3.17-20260508ce" "git+https://gitlab.inria.fr/cchavano/compcert-ce.git"]
