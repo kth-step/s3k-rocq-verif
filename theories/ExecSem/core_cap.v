@@ -3,7 +3,7 @@ From stdpp Require Import prelude propset.
 Set Implicit Arguments.
 
 (** Capability datatype *)
-Record cap (A : Set) := mk_cap {
+Record cap_t (A : Type) := {
   Cowner : option nat;
   Cfree : nat;
   Csize : nat;
@@ -11,34 +11,36 @@ Record cap (A : Set) := mk_cap {
 }.
 
 (** Capability table *)
-Definition cap_table (A : Set) := list (option (cap A)).
+Inductive cap_table_t (A : Type) := CapTable (l : list (option (cap_t A))).
 
-Definition cap_get {A} (ct : cap_table A) (i : nat) : option (cap A) :=
-  match ct !! i with
-  | None => None
-  | Some v => v
+Definition cap_get {A} (ct : cap_table_t A) (i : nat) : option (cap_t A) :=
+  match ct with CapTable l =>
+    match l !! i with
+    | None => None
+    | Some v => v
+    end
   end.
 
-Definition cap_set {A} (ct : cap_table A) (i : nat) (v : option (cap A)) : cap_table A :=
-  <[i := v]> ct.
+Definition cap_set {A} (ct : cap_table_t A) (i : nat) (v : option (cap_t A)) : cap_table_t A :=
+  match ct with CapTable l => CapTable (<[i := v]> l) end.
 
 (* To be added as needed.
 
-Definition cap_range {A} (ct : cap_table A) (i : nat) :=
+Definition cap_range {A} (ct : cap_table_t A) (i : nat) :=
   match cap_get ct i with
   | None => empty
   | Some v => {[ j | i <= j /\ j < i + v.(Csize) ]}
   end.
 
-Definition cap_frange {A} (ct : cap_table A) (i : nat) :=
+Definition cap_frange {A} (ct : cap_table_t A) (i : nat) :=
   match cap_get ct i with
   | None => empty
   | Some v => {[ j | i <= j /\ i + j < v.(Cfree) ]}
   end.
 
-Definition cap_table_size {A} (ct : cap_table A) := length ct.
+Definition cap_table_size {A} (ct : cap_table_t A) := length ct.
 
-Record cap_wf {A} (ct: cap_table A) := {
+Record cap_wf {A} (ct: cap_table_t A) := {
   cap_wf_free_size : 
     forall i c, cap_get ct i = Some c -> 0 < c.(Cfree) <= c.(Csize);
   cap_wf_valid_index :
