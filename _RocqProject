@@ -1,3 +1,6 @@
 -Q theories S3K
 
-theories/ExecSem/test.v
+theories/ExecSem/util.v
+theories/ExecSem/core_cap.v
+theories/ExecSem/core_tsl.v
+theories/ExecSem/exec_sched.v
