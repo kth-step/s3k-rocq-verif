@@ -1,4 +1,4 @@
-From S3K Require Export core_kernel exec_sched.
+From S3K Require Import core_kernel exec_sched.
 
 (** * Executable kernel state *)
 

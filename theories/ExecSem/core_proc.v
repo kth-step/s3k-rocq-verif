@@ -12,13 +12,13 @@ Inductive reg_t :=
   | REG_A0 | REG_A1 | REG_A2 | REG_A3 | REG_A4 | REG_A5 | REG_A6 | REG_A7
   | REG_ECAUSE | REG_EVAL | REG_EPC | REG_ESP | REG_TPC | REG_TSP.
 
-Global Instance reg_t_eq_dec : EqDecision reg_t.
+#[export] Instance reg_t_eq_dec : EqDecision reg_t.
 Proof. solve_decision. Defined.
 
 Inductive pmpreg_t :=
     PMP_REG0 | PMP_REG1 | PMP_REG2 | PMP_REG3 | PMP_REG4 | PMP_REG5 | PMP_REG6 | PMP_REG7.
 
-Global Instance pmpreg_t_eq_dec : EqDecision pmpreg_t.
+#[export] Instance pmpreg_t_eq_dec : EqDecision pmpreg_t.
 Proof. solve_decision. Defined.
 
 Record proc_t := mk_proc_t {

@@ -1,7 +1,7 @@
 From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 From compcert Require Import Integers.
-From S3K Require Import core_cap core_err exec_kernel.
+From S3K Require Import core_cap core_err core_mon core_kernel exec_kernel.
 
 (** * Executable semantics for monitor capability operations *)
 

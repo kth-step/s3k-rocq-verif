@@ -1,3 +1,3 @@
-From stdpp Require Export prelude.
+From stdpp Require Import prelude.
 
 (** * Utilities *)

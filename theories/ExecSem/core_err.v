@@ -1,6 +1,5 @@
 From stdpp Require Import prelude.
 From compcert Require Import Integers.
-From Stdlib Require Import ZArith.
 
 (** * Error code definitions *)
 
