@@ -1,6 +1,9 @@
+From stdpp Require Import prelude.
 From S3K Require Import core_cap core_tsl util.
 
-Record sched_entry_t := {
+(** * Scheduler definitions *)
+
+Record sched_entry_t := mk_sched_entry_t {
   Spid : option nat;
   Slen : nat;
 }.

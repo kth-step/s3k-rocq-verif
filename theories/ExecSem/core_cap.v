@@ -2,8 +2,10 @@ From stdpp Require Import prelude propset.
 
 Set Implicit Arguments.
 
+(** * Capability definitions *)
+
 (** Capability datatype *)
-Record cap_t (A : Type) := {
+Record cap_t (A : Type) := mk_cap_t {
   Cowner : option nat;
   Cfree : nat;
   Csize : nat;
@@ -13,7 +15,7 @@ Record cap_t (A : Type) := {
 (** Capability table *)
 Inductive cap_table_t (A : Type) := CapTable (l : list (option (cap_t A))).
 
-Definition cap_get {A} (ct : cap_table_t A) (i : nat) : option (cap_t A) :=
+Definition cap_get (A : Type) (ct : cap_table_t A) (i : nat) : option (cap_t A) :=
   match ct with CapTable l =>
     match l !! i with
     | None => None
@@ -21,8 +23,14 @@ Definition cap_get {A} (ct : cap_table_t A) (i : nat) : option (cap_t A) :=
     end
   end.
 
-Definition cap_set {A} (ct : cap_table_t A) (i : nat) (v : option (cap_t A)) : cap_table_t A :=
+Definition cap_set (A: Type) (ct : cap_table_t A) (i : nat) (v : option (cap_t A)) : cap_table_t A :=
   match ct with CapTable l => CapTable (<[i := v]> l) end.
+
+Definition cap_owner_get (A : Type) (τ : cap_table_t A) (p : nat) (i : nat) : option (cap_t A) :=
+  match cap_get τ i with
+  | None => None
+  | Some v => if decide (v.(Cowner) = Some p) then Some v else None
+  end.
 
 (* To be added as needed.
 

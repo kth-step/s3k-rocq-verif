@@ -1,6 +1,9 @@
+From stdpp Require Import prelude.
 From S3K Require Import core_cap.
 
-Record tsl_t := {
+(** * Time Slice Capability *)
+
+Record tsl_t := mk_tsl_t {
   Tenable : bool;
   Tbase : nat;
   Tsize : nat;

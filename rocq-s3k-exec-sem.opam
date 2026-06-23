@@ -27,12 +27,11 @@ tags: [
   "category:Computer Science/Data Types and Data Structures"
   "keyword:S3K"
   "keyword:separation kernel"
-  "logpath:S3KexecSem"
+  "logpath:S3K.ExecSem"
 ]
 authors: [
   "Hanwen Gu"
   "Henrik Karlsson"
 ]
 
-# TODO specify tag for compcert-ce
-pin-depends: ["compcert-ce.3.17-20260508ce" "git+https://gitlab.inria.fr/cchavano/compcert-ce.git"]
+pin-depends: ["compcert-ce.3.17-20260508ce" "git+https://gitlab.inria.fr/cchavano/compcert-ce.git#barocq-v0.5"]
