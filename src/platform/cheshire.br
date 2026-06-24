@@ -1,0 +1,4 @@
+module Platform
+
+defn num_harts : u64 = 1ul
+defn rtchz : u64 = 1000000ul

@@ -1,6 +1,12 @@
 -Q theories S3K
+-Q contrib/barocq S3K.BarocqComp
 
 theories/ExecSem/util.v
 theories/ExecSem/core_cap.v
 theories/ExecSem/core_tsl.v
 theories/ExecSem/exec_sched.v
+
+theories/Barocq/S3K_ShallowR.v
+contrib/barocq
+
+theories/Verif/test.v

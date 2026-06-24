@@ -1,0 +1,87 @@
+module Mon
+
+import Types
+
+defn valid_access(ks: kstate, owner: pid_t, i: index_t) : bool =
+  if i < Config::mon_table_size then
+    ks.mon_table[i].owner == owner
+  else
+    false
+
+defn get_pid(ks: kstate, owner: pid_t, i: index_t) : pid_t =
+  if valid_access(ks, owner, i) then
+    ks.mon_table[i].pid
+  else
+    0ul
+
+defn delete(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let mon_table = ks.mon_table in
+    let cap = mon_table[i].owner <- 0ul in
+    let mon_table = mon_table[i] <- cap in
+    let ks = ks.mon_table <- mon_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn derive(ks: kstate, owner: pid_t, i: index_t, target: pid_t, csize: fuel_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let mon_table = ks.mon_table in
+    let cap_i = mon_table[i] in
+    if csize == 0ul || cap_i.cfree <= csize then
+      ks.errcode <- Error::invalid_argument
+    else
+      let cap_i = { cap_i with
+        cfree <- cap_i.cfree - csize,
+      } in
+      let j = i + cap_i.cfree in
+      let pid = cap_i.pid in
+      let mon_table = mon_table[i] <- cap_i in
+      let cap_j = { mon_table[j] with
+        owner <- target,
+        cfree <- csize,
+        csize <- csize,
+        pid <- pid,
+      } in
+      let mon_table = mon_table[j] <- cap_j in
+      let ks = ks.mon_table <- mon_table in
+      ks.errcode <- j as i64
+  else
+    ks.errcode <- Error::invalid_access
+
+defn transfer(ks: kstate, owner: pid_t, i: index_t, new_owner: pid_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let mon_table = ks.mon_table in
+    let cap = mon_table[i].owner <- new_owner in
+    let mon_table = mon_table[i] <- cap in
+    let ks = ks.mon_table <- mon_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn revoke_once(ks: kstate, i: index_t) : kstate =
+  let mon_table = ks.mon_table in
+  if mon_table[i].cfree < mon_table[i].csize then 
+    let j = i + mon_table[i].cfree in 
+    let cap_j = mon_table[j] in
+    let j_cfree = cap_j.cfree in
+    let cap_j = { cap_j with
+      owner <- 0ul,
+      cfree <- 0ul, } in
+    let mon_table = mon_table[j] <- cap_j in
+    let cap_i = mon_table[i] in
+    let cap_i = cap_i.cfree <- cap_i.cfree + j_cfree in
+    let errcode = cap_i.csize - cap_i.cfree in
+    let mon_table = mon_table[i] <- cap_i in
+    { ks with
+      mon_table <- mon_table,
+      errcode <- errcode as i64, }
+  else
+    ks.errcode <- Error::success
+
+defn revoke(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    revoke_once(ks, i)
+  else
+    ks.errcode <- Error::invalid_access
+

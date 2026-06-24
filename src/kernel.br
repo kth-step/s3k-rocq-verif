@@ -1,0 +1,7 @@
+module Kernel
+
+import Types
+
+@unique
+decl ks : kstate
+
