@@ -1,7 +1,7 @@
-From stdpp Require Import prelude functions countable.
+From stdpp Require Import prelude functions countable gmap.
 From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
-Local Open Scope positive.
+From S3K Require Import util.
 
 (** * Process control block definitions *)
 
@@ -31,7 +31,7 @@ Proof. solve_decision. Defined.
                  | 3 => Some PERM_EXEC
                  | _ => None
                  end
-  |}.
+  |}%positive.
 Solve All Obligations with by intros [].
 
 #[export] Instance reg_t_eq_dec : EqDecision reg_t.
@@ -61,6 +61,44 @@ Definition proc_reg_get (p : proc_t) (reg : reg_t) : int64 :=
 Definition proc_pmp_set (p : proc_t) (pmpreg : pmpreg_t) (conf : option pmpconf_t) : proc_t :=
   p <| ppmp ::= <[ pmpreg := conf ]> |>.
 
+Definition ptable_pmp_try_set (ptbl : ptable_t) (p_opt : option nat)
+    (pmpreg_opt : option pmpreg_t) (conf_opt : option pmpconf_t)
+  : ptable_t :=
+  match p_opt with
+  | None => ptbl
+  | Some p =>
+      match pmpreg_opt with
+      | None => ptbl
+      | Some pmpreg =>
+          match ptbl !! p with
+          | None => ptbl
+          | Some proc =>
+              <[p :=
+                  proc <| ppmp ::= <[pmpreg := conf_opt]> |>
+               ]> ptbl
+          end
+      end
+  end.
+
 Definition proc_pmp_get (p : proc_t) (pmpreg : pmpreg_t) : option pmpconf_t :=
   p.(ppmp) pmpreg.
+
+Definition ptable_pmp_get (ptbl : ptable_t) (p : nat) (pmpreg : pmpreg_t)
+  : option pmpconf_t :=
+  match ptbl !! p with
+  | None => None
+  | Some proc => proc_pmp_get proc pmpreg
+  end.
+
+Definition rwx_decode (rwx : byte) : gset perm_t :=
+  (if Byte.eq (rwx &₈  Byte.one) Byte.one then {[ PERM_READ ]} else ∅ ) ∪
+  (if Byte.eq (rwx &₈  Byte.repr 2) (Byte.repr 2) then {[ PERM_WRITE ]} else ∅ ) ∪
+  (if Byte.eq (rwx &₈  Byte.repr 4) (Byte.repr 4) then {[ PERM_EXEC ]} else ∅ ).
+
+Definition pmp_decode (pc : pmpconf_t) : gset perm_t * nat * nat :=
+  let '(rwx, addr) := pc in
+  let perm := rwx_decode rwx in
+  let base := int64_to_n (((addr +₆₄ 1UL) &₆₄ addr) <<₆₄ 2UL) in
+  let size := int64_to_n (((addr +₆₄ 1UL) ^₆₄ addr) +₆₄ 1UL)  in
+  (perm, base, size).
 
