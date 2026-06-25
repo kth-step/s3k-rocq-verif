@@ -1,13 +1,10 @@
 -Q theories S3K
 
 theories/ExecSem/util.v
-theories/ExecSem/core_cap.v
-theories/ExecSem/core_tsl.v
-theories/ExecSem/core_proc.v
-theories/ExecSem/core_mon.v
-theories/ExecSem/core_kernel.v
-theories/ExecSem/core_err.v
-theories/ExecSem/exec_sched.v
-theories/ExecSem/exec_kernel.v
-theories/ExecSem/exec_mon.v
+theories/ExecSem/cap.v
+theories/ExecSem/ctx.v
+theories/ExecSem/proc.v
+theories/ExecSem/sched.v
+theories/ExecSem/kstate.v
+theories/ExecSem/exec.v
 
