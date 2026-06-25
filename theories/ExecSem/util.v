@@ -1,6 +1,6 @@
 From stdpp Require Import prelude.
 From compcert Require Import Integers.
-From BarocqComp Require Import Intop.
+From S3K.BarocqComp Require Import Intop.
 Export IntopNotations.
 
 (** * Utilities *)
