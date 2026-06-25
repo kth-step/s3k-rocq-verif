@@ -1,0 +1,225 @@
+module Ipc
+
+import Types
+
+defn valid_access(ks: kstate, owner: pid_t, i: index_t) : bool =
+  if i < Config::ipc_table_size then
+    ks.ipc_table[i].owner == owner
+  else
+    false
+
+defn valid_derivation(cap: ipc_t, csize: fuel_t, mode: ipc_mode_t, flag: ipc_flag_t) : bool =
+  if csize >= cap.cfree && csize > 0UL then
+    false
+  else if (cap.mode & ipc_MODE_REVOKE) != 0U then
+    false
+  else if cap.mode == ipc_MODE_NONE then
+    mode != ipc_MODE_NONE || flag == 0U
+  else
+    cap.mode == mode && cap.flag == flag && csize == 1UL
+
+defn valid_capability_send(ks: kstate, owner: pid_t, i: index_t, capty: word_t, flag: ipc_flag_t) : bool =
+    match capty as capty_t with
+      Capty_NONE => true
+      Capty_MEM => (flag & ipc_FLAG_MEM) as bool && Machine::mem_valid_access(owner, i)
+      Capty_TSL => (flag & ipc_FLAG_TSL) as bool && Tsl::valid_access(ks, owner, i)
+      Capty_MON => (flag & ipc_FLAG_MON) as bool && Mon::valid_access(ks, owner, i)
+      Capty_IPC => (flag & ipc_FLAG_IPC) as bool && valid_access(ks, owner, i)
+      _ => false
+    end
+
+defn invoke_valid_access(ks: kstate, owner: index_t, i: index_t, mode: ipc_mode_t, sink: bool) : bool =
+  if !valid_access(ks, owner, i) then
+    false
+  else if ks.ipc_table[i].mode != mode then
+    false
+  else if sink then
+    ks.ipc_table[i].sink == i
+  else
+    ks.ipc_table[i].sink != i
+
+defn delete(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let ipc_table = ks.ipc_table in
+    let cap = ipc_table[i].owner <- 0ul in
+    let ipc_table = ipc_table[i] <- cap in
+    let ks = ks.ipc_table <- ipc_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn derive(ks: kstate, owner: pid_t, i: index_t, target: pid_t, csize: fuel_t, mode: ipc_mode_t, flag: ipc_flag_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let mode = mode & ipc_MODE_MASK in
+    let flag = flag & ipc_FLAG_MASK in
+    let ipc_table = ks.ipc_table in
+    let cap_i = ipc_table[i] in
+    if !valid_derivation(cap_i, csize, mode, flag) then
+      ks.errcode <- Error::invalid_argument
+    else
+      let cap_i = { cap_i with
+        cfree <- cap_i.cfree - csize,
+      } in
+      let j = i + cap_i.cfree in
+      let sink_j = if cap_i.mode == ipc_MODE_NONE then j else cap_i.sink in
+      let ipc_table = ipc_table[i] <- cap_i in
+      let cap_j = { ipc_table[j] with
+        owner <- target,
+        cfree <- csize,
+        csize <- csize,
+        mode <- mode,
+        flag <- flag,
+        sink <- sink_j,
+        source <- j,
+        opt <- 0U,
+      } in
+      let ipc_table = ipc_table[j] <- cap_j in
+      let ks = ks.ipc_table <- ipc_table in
+      ks.errcode <- j as i64
+  else
+    ks.errcode <- Error::invalid_access
+
+defn transfer(ks: kstate, owner: pid_t, i: index_t, new_owner: pid_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let ipc_table = ks.ipc_table in
+    let cap = ipc_table[i].owner <- new_owner in
+    let ipc_table = ipc_table[i] <- cap in
+    let ks = ks.ipc_table <- ipc_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn revoke_once(ks: kstate, i: index_t) : kstate =
+  let ipc_table = ks.ipc_table in
+  if ipc_table[i].cfree < ipc_table[i].csize then 
+    let j = i + ipc_table[i].cfree in 
+    let cap_j = ipc_table[j] in
+    let j_cfree = cap_j.cfree in
+    let cap_j = { cap_j with
+      owner <- 0ul,
+      cfree <- 0ul, } in
+    let ipc_table = ipc_table[j] <- cap_j in
+    let cap_i = ipc_table[i] in
+    let cap_i = { cap_i with
+      cfree <- cap_i.cfree + j_cfree,
+      mode <- ipc_MODE_REVOKE,
+    } in
+    let errcode = cap_i.csize - cap_i.cfree in
+    let cap_i =
+      if errcode == 0UL then
+        cap_i.mode <- ipc_MODE_NONE
+      else
+        cap_i
+    in
+    let ipc_table = ipc_table[i] <- cap_i in
+    { ks with
+      ipc_table <- ipc_table,
+      errcode <- errcode as i64, }
+  else
+    ks.errcode <- Error::success
+
+defn revoke(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    revoke_once(ks, i)
+  else
+    ks.errcode <- Error::invalid_access
+
+defn do_send(ks: kstate, receiver : pid_t, owner: pid_t, capty: capty_t, i: index_t) : kstate =
+  let ks = Proc::set_reg(ks, receiver, Reg_a0, Error::success as u64) in
+  let ks = Proc::set_reg(ks, receiver, Reg_a1, ks.message[0ul]) in
+  let ks = Proc::set_reg(ks, receiver, Reg_a2, ks.message[1ul]) in
+  let ks = Proc::set_reg(ks, receiver, Reg_a3, capty as u64) in
+  let ks = Proc::set_reg(ks, receiver, Reg_a4, (if capty == Capty_NONE then 0ul else i)) in
+  match capty with
+    Capty_NONE => ks
+    Capty_MEM => Machine::mem_transfer(ks, owner, i, receiver)
+    Capty_TSL => Tsl::transfer(ks, owner, i ,receiver)
+    Capty_MON => Mon::transfer(ks, owner, i, receiver)
+    Capty_IPC => transfer(ks, owner, i, receiver)
+    _ => ks
+  end
+
+
+defn call(ks: kstate, owner: pid_t, i: index_t, capty: word_t, j: index_t) : kstate =
+  if !invoke_valid_access(ks, owner, i, ipc_MODE_BSYNC, false) then
+    ks.errcode <- Error::invalid_access
+  else if !valid_capability_send(ks, owner, j, capty, ks.ipc_table[i].flag) then
+    ks.errcode <- Error::invalid_argument
+  else
+    let sink = ks.ipc_table[i].sink in
+    let receiver = ks.ipc_table[sink].owner in
+    if (receiver == invalid_pid) then
+      ks.errcode <- Error::invalid_state
+    else
+      let servtime = ks.ipc_table[sink].opt in
+      let is_yield = (ks.ipc_table[sink].flag & ipc_FLAG_YIELD) != 0U in
+      let is_timeout =
+        if is_yield then
+          let curr_time = Machine::rtc_get_time() in
+          let timeout = Proc::get_timeout(ks, ks.active_pid)  in
+          curr_time + (servtime as u64) * Config::ticks_per_us  >= timeout
+        else
+          false
+      in
+      if is_timeout then
+        ks.errcode <- Error::invalid_state
+      else
+        if !Proc::ipc_can_acquire(ks, receiver, sink) then
+          ks.errcode <- Error::invalid_state
+        else
+          let ks = Proc::ipc_acquire(ks, receiver) in
+          let ks = do_send(ks, receiver, owner, capty as capty_t, j) in
+          let ipc_table = ks.ipc_table in
+          let cap_sink = { ipc_table[sink] with
+            source <- i,
+            opt <- 0u,
+          } in
+          let ipc_table = ipc_table[sink] <- cap_sink in
+          let ks = ks.ipc_table <- ipc_table in
+          let ks = Proc::ipc_block(ks, owner, i) in
+          let sender = ks.active_pid in
+          let ks =
+            if (ks.ipc_table[i].flag & ipc_FLAG_YIELD) as bool then
+              let ks = ks.active_pid <- receiver in
+              Proc::set_timeout(ks, ks.active_pid, Proc::get_timeout(ks, sender))
+            else
+              let ks = Proc::release(ks, receiver) in
+              Proc::set_timeout(ks, sender, Config::uint64_max)
+          in
+          ks.errcode <- Error::timeout
+
+defn replyrecv(ks: kstate, owner: pid_t, i: index_t, capty: word_t, j: index_t, servtime: u32) : kstate =
+  if !invoke_valid_access(ks, owner, i, ipc_MODE_BSYNC, true) then
+    ks.errcode <- Error::invalid_access
+  else if !valid_capability_send(ks, owner, j, capty, ks.ipc_table[i].flag) then
+    ks.errcode <- Error::invalid_argument
+  else
+    let sender = ks.active_pid in
+    let ks = ks.active_pid <- invalid_pid in
+    let source = ks.ipc_table[i].source in
+    let receiver = ks.ipc_table[source].owner in
+    let ks =
+      if (source != i) && (receiver != invalid_pid) && Proc::ipc_can_acquire(ks, receiver, source) then
+        let ks = Proc::ipc_acquire(ks, receiver) in
+        let ks = do_send(ks, receiver, owner, capty as capty_t, j) in
+        let ipc_table = ks.ipc_table in
+        let cap_i = ipc_table[i].source <- i in
+        let ipc_table = ipc_table[i] <- cap_i in
+        let ks = ks.ipc_table <- ipc_table in
+        if (ks.ipc_table[i].flag & ipc_FLAG_YIELD) as bool then
+          let ks = ks.active_pid <- receiver in
+          Proc::set_timeout(ks, receiver, Proc::get_timeout(ks, sender))
+        else
+          let ks = Proc::release(ks, receiver) in
+          Proc::set_timeout(ks, receiver, 0UL)
+      else
+        ks
+    in
+    let ks = Proc::ipc_block(ks, owner, i) in
+    let ipc_table = ks.ipc_table in
+    let cap_i = ipc_table[i].opt <- servtime in
+    let ipc_table = ipc_table[i] <- cap_i in
+    let ks = ks.ipc_table <- ipc_table in
+    let ks = Proc::set_timeout(ks, sender, Config::uint64_max) in
+    ks.errcode <- Error::success
+

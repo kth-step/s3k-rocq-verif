@@ -1,0 +1,10 @@
+module Error
+
+defn success : i64 = 0l
+defn invalid_access : i64 = -1l
+defn invalid_argument : i64 = -2l
+defn invalid_state : i64 = -3l
+defn slot_in_use : i64 = -4l
+defn timeout : i64 = -5l
+defn continue : i64 = 1l
+

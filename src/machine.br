@@ -1,0 +1,14 @@
+module Machine
+
+import Types
+
+decl sched_split : (u64, u64, u64, u64, u64) -> u64
+decl sched_set_pid : (u64, u64, u64) -> u64
+
+decl lock_acquire : (bool) -> bool
+decl lock_release : () -> u64
+
+decl rtc_get_time : () -> u64
+
+decl mem_transfer : (@write kstate, pid_t, index_t, pid_t) -> kstate
+decl mem_valid_access : (pid_t, index_t) -> bool

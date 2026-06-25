@@ -1,0 +1,115 @@
+module Tsl
+
+import Types
+
+defn valid_access(ks: kstate, owner: pid_t, i: index_t) : bool =
+  if i < Config::tsl_table_size then
+    ks.tsl_table[i].owner == owner
+  else
+    false
+
+@static
+defn not_derivable(parent: tsl_t, csize: fuel_t, size: time_slot_t) : bool =
+  parent.cfree <= csize || size > parent.free || csize == 0ul || size == 0ul
+
+defn delete(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap = tsl_table[i].owner <- 0ul in
+    let dummy = if cap.free > 0ul then Machine::sched_set_pid(cap.hart, 0ul, cap.base) else 0ul in
+    let tsl_table = tsl_table[i] <- cap in
+    let ks = ks.tsl_table <- tsl_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn derive(ks: kstate, owner: pid_t, i: index_t, target: pid_t, csize: fuel_t, enable: bool, size: time_slot_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap_i = tsl_table[i] in
+    if not_derivable(cap_i, csize, size) then
+      ks.errcode <- Error::invalid_argument
+    else
+      let cap_i = { cap_i with
+        cfree <- cap_i.cfree - csize,
+        free <- cap_i.free - size,
+      } in
+      let j = i + cap_i.cfree in
+      let base = cap_i.base + cap_i.free in
+      let hart = cap_i.hart in
+      let tsl_table = tsl_table[i] <- cap_i in
+      let cap_j = { tsl_table[j] with
+        owner <- target,
+        cfree <- csize,
+        csize <- csize,
+        hart <- hart,
+        enabled <- enable,
+        base <- base,
+        size <- size,
+        free <- size,
+      } in
+      let tsl_table = tsl_table[j] <- cap_j in
+      let sched_pid = if enable then target else 0ul in
+      let cap_i = tsl_table[i] in
+      let dummy = Machine::sched_split(cap_i.hart, sched_pid, cap_i.base, base, base + size) in
+      let ks = ks.tsl_table <- tsl_table in
+      ks.errcode <- j as i64
+  else
+    ks.errcode <- Error::invalid_access
+
+defn set(ks: kstate, owner: pid_t, i: index_t, enable: bool) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap = tsl_table[i].enabled <- enable in
+    let dummy = if cap.free > 0ul
+      then let sched_pid = if enable then owner else 0ul in
+        Machine::sched_set_pid(cap.hart, sched_pid, cap.base)
+      else 0ul in
+    let tsl_table = tsl_table[i] <- cap in
+    let ks = ks.tsl_table <- tsl_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn transfer(ks: kstate, owner: pid_t, i: index_t, new_owner: pid_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap = tsl_table[i].owner <- new_owner in
+    let dummy = if cap.free > 0ul
+      then let sched_pid = if cap.enabled then new_owner else 0ul in
+        Machine::sched_set_pid(cap.hart, sched_pid, cap.base)
+      else 0ul in
+    let tsl_table = tsl_table[i] <- cap in
+    let ks = ks.tsl_table <- tsl_table in
+    ks.errcode <- Error::success
+  else
+    ks.errcode <- Error::invalid_access
+
+defn revoke_once(ks: kstate, i: index_t) : kstate =
+  let tsl_table = ks.tsl_table in
+  if tsl_table[i].cfree < tsl_table[i].csize then 
+    let j = i + tsl_table[i].cfree in 
+    let cap_j = tsl_table[j] in
+    let j_cfree = cap_j.cfree in
+    let j_free = cap_j.free in
+    let cap_j = { cap_j with
+      owner <- 0ul,
+      cfree <- 0ul, } in
+    let tsl_table = tsl_table[j] <- cap_j in
+    let cap_i = tsl_table[i] in
+    let cap_i = {cap_i with
+      cfree <- cap_i.cfree + j_cfree,
+      free <- cap_i.free + j_free, } in
+    let errcode = cap_i.csize - cap_i.cfree in
+    let tsl_table = tsl_table[i] <- cap_i in
+    { ks with
+      tsl_table <- tsl_table,
+      errcode <- errcode as i64, }
+  else
+    ks.errcode <- Error::success
+
+defn revoke(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    revoke_once(ks, i)
+  else
+    ks.errcode <- Error::invalid_access

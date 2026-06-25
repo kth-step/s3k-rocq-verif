@@ -1,0 +1,19 @@
+module Config
+
+import Platform
+
+defn ticks_per_us : u64 = rtchz / 1000000UL
+
+defn uint64_max : u64 = 0xFFFFFFFFFFFFFFFFUL
+
+defn max_pid : u64 = 4ul
+
+defn max_time_fuel : u64 = 32ul
+defn tsl_table_size : u64 = num_harts * max_time_fuel
+
+defn max_mon_fuel : u64 = 8ul
+defn mon_table_size :u64 = max_mon_fuel * max_pid
+
+defn max_ipc_fuel : u64 = 16ul
+defn ipc_table_size : u64 = max_ipc_fuel
+

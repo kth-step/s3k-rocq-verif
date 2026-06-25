@@ -1,0 +1,267 @@
+module Syscall
+
+import Types
+
+
+(* Get current process's PID *)
+@static
+defn pid_get(ks: kstate, pid: pid_t) : kstate =
+  ks.errcode <- pid as i64
+
+@static
+defn set_message(ks: kstate, data0: word_t, data1: word_t) : kstate =
+  let msg = ks.message in
+  let msg = msg[0ul] <- data0 in
+  let msg = msg[1ul] <- data1 in
+  ks.message <- msg
+
+(* Monitor grant operations *)
+@static
+defn mon_tsl_grant(ks: kstate, owner: pid_t, i: index_t, j: index_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Tsl::transfer(ks, owner, j, target)
+
+@static
+defn mon_mon_grant(ks: kstate, owner: pid_t, i: index_t, j: index_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Mon::transfer(ks, owner, j, target)
+
+@static
+defn mon_ipc_grant(ks: kstate, owner: pid_t, i: index_t, j: index_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Ipc::transfer(ks, owner, j, target)
+
+(* Monitor derive operations *)
+@static
+defn mon_tsl_derive(ks: kstate, owner: pid_t, i: index_t, j: index_t, csize: fuel_t, enable: bool, size: time_slot_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Tsl::derive(ks, owner, j, target, csize, enable, size)
+  
+@static
+defn mon_mon_derive(ks: kstate, owner: pid_t, i: index_t, j: index_t, csize: fuel_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Mon::derive(ks, owner, j, target, csize)
+
+@static
+defn mon_ipc_derive(ks: kstate, owner: pid_t, i: index_t, j: index_t, csize: fuel_t, mode: ipc_mode_t, flag: ipc_flag_t) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Ipc::derive(ks, owner, j, target, csize, mode, flag)
+
+@static
+defn mon_tsl_set(ks: kstate, owner: pid_t, i: index_t, j: index_t, enable: bool) : kstate =
+  let target = Mon::get_pid(ks, owner, i) in
+  if target == 0ul then
+    ks.errcode <- Error::invalid_access
+  else
+    Tsl::set(ks, target, j, enable)
+
+(* NOTE Not all of these are implemented. *)
+enum syscall {
+	Syscall_pid_get,
+	Syscall_vreg_get,
+	Syscall_vreg_set,
+	Syscall_sync,
+	Syscall_sleep_until,
+	Syscall_mem_introspect,
+	Syscall_tsl_introspect,
+	Syscall_mon_introspect,
+	Syscall_ipc_introspect,
+	Syscall_mem_derive,
+	Syscall_tsl_derive,
+	Syscall_mon_derive,
+	Syscall_ipc_derive,
+	Syscall_mem_revoke,
+	Syscall_tsl_revoke,
+	Syscall_mon_revoke,
+	Syscall_ipc_revoke,
+	Syscall_mem_delete,
+	Syscall_tsl_delete,
+	Syscall_mon_delete,
+	Syscall_ipc_delete,
+	Syscall_mem_pmp_get,
+	Syscall_mem_pmp_set,
+	Syscall_mem_pmp_clear,
+	Syscall_tsl_set,
+	Syscall_mon_suspend,
+	Syscall_mon_resume,
+	Syscall_mon_yield,
+	Syscall_mon_reg_get,
+	Syscall_mon_reg_set,
+	Syscall_mon_vreg_get,
+	Syscall_mon_vreg_set,
+	Syscall_mon_mem_introspect,
+	Syscall_mon_tsl_introspect,
+	Syscall_mon_mon_introspect,
+	Syscall_mon_ipc_introspect,
+	Syscall_mon_mem_grant,
+	Syscall_mon_tsl_grant,
+	Syscall_mon_mon_grant,
+	Syscall_mon_ipc_grant,
+	Syscall_mon_mem_derive,
+	Syscall_mon_tsl_derive,
+	Syscall_mon_mon_derive,
+	Syscall_mon_ipc_derive,
+	Syscall_mon_mem_pmp_get,
+	Syscall_mon_mem_pmp_set,
+	Syscall_mon_mem_pmp_clear,
+	Syscall_mon_tsl_set,
+	Syscall_ipc_send,
+	Syscall_ipc_recv,
+	Syscall_ipc_call,
+	Syscall_ipc_reply,
+	Syscall_ipc_replyrecv,
+	Syscall_ipc_asend,
+	Syscall_ipc_arecv,
+  Syscall_max,
+}
+
+defn get_ret(ks: kstate) : u64 =
+  ks.errcode as u64
+
+defn ecall_u : u64 = 8ul
+
+(* C function that handles syscalls unimplemented in Barocq *)
+decl delegate : (@write kstate) -> kstate
+
+@static
+defn do(ks: kstate, pid: pid_t, call: syscall) : kstate =
+  (* Update pc*)
+  let pc = Proc::get_reg(ks, pid, Reg_pc) in
+  let ks = Proc::set_reg(ks, pid, Reg_pc, pc + 4UL) in
+  (* Do syscall *)
+  let ks = match call with
+    Syscall_pid_get =>
+      pid_get(ks, pid)
+    Syscall_tsl_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let csize = Proc::get_reg(ks, pid, Reg_a2) in
+      let enable = Proc::get_reg(ks, pid, Reg_a3) > 0ul in
+      let size = Proc::get_reg(ks, pid, Reg_a4) in
+      Tsl::derive(ks, pid, i, pid, csize, enable, size)
+    Syscall_mon_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let csize = Proc::get_reg(ks, pid, Reg_a2) in
+      Mon::derive(ks, pid, i, pid, csize)
+    Syscall_ipc_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let csize = Proc::get_reg(ks, pid, Reg_a2) in
+      let mode = Proc::get_reg(ks, pid, Reg_a3) as ipc_mode_t in
+      let flag = Proc::get_reg(ks, pid, Reg_a4) as ipc_flag_t in
+      Ipc::derive(ks, pid, i, pid, csize, mode, flag)
+    Syscall_tsl_revoke =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Tsl::revoke(ks, pid, i)
+    Syscall_mon_revoke =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Mon::revoke(ks, pid, i)
+    Syscall_ipc_revoke =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Ipc::revoke(ks, pid, i)
+    Syscall_tsl_delete =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Tsl::delete(ks, pid, i)
+    Syscall_mon_delete =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Mon::delete(ks, pid, i)
+    Syscall_ipc_delete =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      Ipc::delete(ks, pid, i)
+    Syscall_tsl_set =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let enable  = Proc::get_reg(ks, pid, Reg_a2) > 0ul in
+      Tsl::set(ks, pid, i, enable)
+    (*Syscall_mon_yield =>
+      let i = Proc::get_reg(kd, pid, Reg_a1) in
+      Mon::yield(ks, pid, i)*)
+    Syscall_mon_tsl_grant =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      mon_tsl_grant(ks, pid, i, j)
+    Syscall_mon_mon_grant =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      mon_mon_grant(ks, pid, i, j)
+    Syscall_mon_ipc_grant =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      mon_ipc_grant(ks, pid, i, j)
+    Syscall_mon_tsl_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      let csize = Proc::get_reg(ks, pid, Reg_a3) in
+      let enable = Proc::get_reg(ks, pid, Reg_a4) > 0ul in
+      let size = Proc::get_reg(ks, pid, Reg_a5) in
+      mon_tsl_derive(ks, pid, i, j, csize, enable, size)
+    Syscall_mon_mon_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      let csize = Proc::get_reg(ks, pid, Reg_a3) in
+      mon_mon_derive(ks, pid, i, j, csize)
+    Syscall_mon_ipc_derive =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      let csize = Proc::get_reg(ks, pid, Reg_a3) in
+      let mode = Proc::get_reg(ks, pid, Reg_a4) as ipc_mode_t in
+      let flag = Proc::get_reg(ks, pid, Reg_a5) as ipc_flag_t in
+      mon_ipc_derive(ks, pid, i, j, csize, mode, flag)
+    Syscall_mon_tsl_set =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let j = Proc::get_reg(ks, pid, Reg_a2) in
+      let enable = Proc::get_reg(ks, pid, Reg_a3) > 0ul in
+      mon_tsl_set(ks, pid, i, j, enable)
+    Syscall_ipc_call =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let ks = set_message(ks, Proc::get_reg(ks, pid, Reg_a2), Proc::get_reg(ks, pid, Reg_a3)) in
+      let capty = Proc::get_reg(ks, pid, Reg_a4) in
+      let j = Proc::get_reg(ks, pid, Reg_a5) in
+      Ipc::call(ks, pid, i, capty, j)
+    Syscall_ipc_replyrecv =>
+      let i = Proc::get_reg(ks, pid, Reg_a1) in
+      let ks = set_message(ks, Proc::get_reg(ks, pid, Reg_a2), Proc::get_reg(ks, pid, Reg_a3)) in
+      let capty = Proc::get_reg(ks, pid, Reg_a4) in
+      let j = Proc::get_reg(ks, pid, Reg_a5) in
+      let servtime = Proc::get_reg(ks, pid, Reg_a6) in
+      Ipc::replyrecv(ks, pid, i, capty, j, servtime as u32)
+    _ =>
+      (* Not implemented, delegate to C *)
+      delegate(ks)
+  end in
+  (* Set return value  *)
+  Proc::set_reg(ks, pid, Reg_a0, ks.errcode as u64)
+
+defn handler(ks: kstate) : kstate =
+  let pid = ks.active_pid in
+  let call = Proc::get_reg(ks, pid, Reg_a0) in
+  (* Check for invalid syscall *)
+  if call >= (Syscall_max as u64) then
+    let ks = ks.errcode <- Error::invalid_access in
+    Exception::handler(ks, ecall_u, call)
+  else
+    (* Try to aquire lock, maybe preempt *)
+    if !Machine::lock_acquire(true) then
+      (* Preempt *)
+      ks.active_pid <- invalid_pid
+    else
+      (* Do syscall *)
+      let ks = do(ks, pid, call as syscall) in
+      (* Release lock *)
+      let dummy = Machine::lock_release() in
+      ks

@@ -1,6 +1,21 @@
 -Q theories S3K
 
+theories/BarocqComp/common/StateMonads.v
+theories/BarocqComp/common/Utils.v
+theories/BarocqComp/common/ZlistPlus.v
+theories/BarocqComp/common/Barray.v
+theories/BarocqComp/common/Res.v
+theories/BarocqComp/common/Intop.v
+theories/BarocqComp/common/ExtOrdered.v
+theories/BarocqComp/common/Ident.v
+theories/BarocqComp/common/Option.v
+theories/BarocqComp/rocqgen/ShallowNotations.v
+
+theories/Barocq/S3K_ShallowR.v
+
 theories/ExecSem/util.v
 theories/ExecSem/core_cap.v
 theories/ExecSem/core_tsl.v
 theories/ExecSem/exec_sched.v
+
+theories/Verif/test.v

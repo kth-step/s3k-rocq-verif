@@ -1,0 +1,66 @@
+module Proc
+
+import Types
+
+@always_inline
+defn set_reg(ks: kstate, pid: pid_t, regid: reg_t, value: word_t) : kstate =
+  let pid = pid - 1ul in
+  let procs = ks.procs in
+  let proc = procs[pid] in
+  let regs = proc.regs[regid as u64] <- value in
+  let proc = proc.regs <- regs in
+  let procs = procs[pid] <- proc in
+  ks.procs <- procs
+
+@always_inline
+defn get_reg(ks: kstate, pid: pid_t, regid: reg_t) : word_t =
+  ks.procs[pid - 1ul].regs[regid as u64]
+
+@always_inline
+defn set_timeout(ks: kstate, pid: pid_t, timeout: u64) : kstate =
+  let pid = pid - 1ul in
+  let procs = ks.procs in
+  let proc = procs[pid].timeout <- timeout in
+  let procs = procs[pid] <- proc in
+  ks.procs <- procs
+
+@always_inline
+defn get_timeout(ks: kstate, pid: pid_t) : u64 =
+  ks.procs[pid - 1ul].timeout
+
+defn get_state(ks: kstate, pid: pid_t) : word_t =
+  ks.procs[pid - 1ul].state
+
+defn set_state(ks: kstate, pid: pid_t, state: word_t) : kstate =
+  let pid = pid - 1ul in
+  let procs = ks.procs in
+  let proc = procs[pid].state <- state in
+  let procs = procs[pid] <- proc in
+  ks.procs <- procs
+
+
+defn proc_STATE_READY : word_t = 0UL
+defn proc_STATE_ACQUIRED : word_t = 1UL
+defn proc_STATE_BLOCKED : word_t = 2UL
+defn proc_STATE_SUSPENDED : word_t = 4UL
+
+defn ipc_can_acquire(ks: kstate, pid: pid_t, i: index_t) : bool =
+  get_state(ks, pid) == (proc_STATE_BLOCKED | i << 4UL)
+
+defn ipc_acquire(ks: kstate, pid: pid_t) : kstate =
+  set_state(ks, pid, proc_STATE_ACQUIRED)    
+
+(*defn ipc_can_block(ks: kstate, pid: pid_t) : bool =
+  get_state(ks, pid) == proc_STATE_ACQUIRED*)
+
+(* TODO is it safe to just set_state *)
+defn ipc_block(ks: kstate, pid: pid_t, i: index_t) : kstate =
+  if get_state(ks, pid) != proc_STATE_ACQUIRED then
+    ks
+  else
+    set_state(ks, pid, proc_STATE_BLOCKED | proc_STATE_ACQUIRED | i << 4UL)
+
+defn release(ks: kstate, pid: pid_t) : kstate =
+  let state = get_state(ks, pid) in
+  set_state(ks, pid, state & ~proc_STATE_ACQUIRED)
+

@@ -21,10 +21,48 @@ jobs:
       - uses: actions/checkout@v6
       - uses: rocq-community/docker-coq-action@v1
         with:
-          opam_file: 'rocq-s3k-exec-sem.opam'
           custom_image: ${{ matrix.image }}
-
-
-# See also:
-# https://github.com/rocq-community/docker-coq-action#readme
-# https://github.com/erikmd/docker-coq-github-action-demo
+          custom_script: |
+            {{before_install}}
+            startGroup "Build rocq-s3k-barocq-comp dependencies"
+              opam pin add -n -y -k path rocq-s3k-barocq-comp .
+              opam update -y
+              opam install -y -j $(nproc) rocq-s3k-barocq-comp --deps-only
+            endGroup
+            startGroup "Build rocq-s3k-barocq-comp"
+              opam install -y -v -j $(nproc) rocq-s3k-barocq-comp
+              opam list
+            endGroup
+            startGroup "Build rocq-s3k-barocq dependencies"
+              opam pin add -n -y -k path rocq-s3k-barocq .
+              opam update -y
+              opam install -y -j $(nproc) rocq-s3k-barocq --deps-only
+            endGroup
+            startGroup "Build rocq-s3k-barocq"
+              opam install -y -v -j $(nproc) rocq-s3k-barocq
+              opam list
+            endGroup
+            startGroup "Build rocq-s3k-exec-sem dependencies"
+              opam pin add -n -y -k path rocq-s3k-exec-sem .
+              opam update -y
+              opam install -y -j $(nproc) rocq-s3k-exec-sem --deps-only
+            endGroup
+            startGroup "Build rocq-s3k-exec-sem"
+              opam install -y -v -j $(nproc) rocq-s3k-exec-sem
+              opam list
+            endGroup
+            startGroup "Build rocq-s3k-verif dependencies"
+              opam pin add -n -y -k path rocq-s3k-verif .
+              opam update -y
+              opam install -y -j $(nproc) rocq-s3k-verif --deps-only
+            endGroup
+            startGroup "Build rocq-s3k-verif"
+              opam install -y -v -j $(nproc) rocq-s3k-verif
+              opam list
+            endGroup
+            startGroup "Uninstallation test"
+              opam remove -y rocq-s3k-verif
+              opam remove -y rocq-s3k-exec-sem
+              opam remove -y rocq-s3k-barocq
+              opam remove -y rocq-s3k-barocq-comp
+            endGroup

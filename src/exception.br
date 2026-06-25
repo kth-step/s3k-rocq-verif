@@ -1,0 +1,48 @@
+module Exception
+
+import Types
+
+@static
+defn handle_mret(proc: proc_t) : proc_t =
+  let trap = proc.trap in
+  let regs = proc.regs in
+  let regs = regs[Reg_pc as u64] <- trap.epc in
+  let regs = regs[Reg_sp as u64] <- trap.esp in
+  let proc = proc.regs <- regs in
+  let trap = { trap with
+    ecause <- 0ul,
+    eval <- 0ul,
+    epc <- 0ul,
+    esp <- 0ul,
+  } in
+  proc.trap <- trap
+
+@static
+defn handle_delegate(proc: proc_t, cause: word_t, tval: word_t) : proc_t =
+  let trap = { proc.trap with
+    ecause <- cause,
+    eval <- tval,
+    epc <- proc.regs[Reg_pc as u64],
+    esp <- proc.regs[Reg_sp as u64],
+  } in
+  let proc = proc.trap <- trap in
+  let regs = proc.regs in
+  let regs = regs[Reg_pc as u64] <- trap.tpc in
+  let regs = regs[Reg_sp as u64] <- trap.tsp in
+  proc.regs <- regs
+
+defn illegal_instruction : u64 = 2UL
+defn mret : u64 = 0x30200073UL
+
+defn handler(ks: kstate, cause: word_t, tval: word_t) : kstate =
+  let procs = ks.procs in
+  let i = ks.active_pid - 1ul in
+  let proc = procs[i] in
+  let proc =
+    if cause == illegal_instruction && tval == mret then
+      handle_mret(proc)
+    else
+      handle_delegate(proc, cause, tval)
+    in
+  let procs = procs[i] <- proc in
+  ks.procs <- procs

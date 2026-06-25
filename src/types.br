@@ -1,0 +1,164 @@
+module Types
+
+import Error
+import Config
+
+type word_t = u64
+
+type pid_t = u64
+
+defn invalid_pid : pid_t = 0UL
+
+type fuel_t = u64
+type index_t = u64
+
+type hart_t = u64
+type time_slot_t = u64
+
+type pmp_slot_t = u32
+type pmp_addr_t = word_t
+type mem_perm_t = u32
+type mem_addr_t = u32
+
+(* ipc modes and flags *)
+type ipc_mode_t = u32
+type ipc_flag_t = u32
+
+defn ipc_MODE_NONE : ipc_mode_t = 0u
+defn ipc_MODE_USYNC : ipc_mode_t = 1u
+defn ipc_MODE_BSYNC : ipc_mode_t = 2u
+defn ipc_MODE_ASYNC : ipc_mode_t = 3u
+defn ipc_MODE_MASK : ipc_mode_t = 0x3u
+defn ipc_MODE_REVOKE : ipc_mode_t = 0x4u
+
+defn ipc_FLAG_YIELD : ipc_flag_t = 1u
+defn ipc_FLAG_TSL : ipc_flag_t = 2u
+defn ipc_FLAG_MEM : ipc_flag_t = 4u
+defn ipc_FLAG_MON : ipc_flag_t = 8u
+defn ipc_FLAG_IPC : ipc_flag_t = 16u
+defn ipc_FLAG_MASK : ipc_flag_t = 0x1Fu
+
+(* Process control block types *)
+
+enum reg_t {
+  Reg_pc,
+  Reg_ra,
+  Reg_sp,
+  Reg_gp,
+  Reg_tp,
+  Reg_a0,
+  Reg_a1,
+  Reg_a2,
+  Reg_a3, 
+  Reg_a4,
+  Reg_a5,
+  Reg_a6,
+  Reg_a7,
+  Reg_t0,
+  Reg_t1,
+  Reg_t2,
+  Reg_t3,
+  Reg_t4,
+  Reg_t5,
+  Reg_t6,
+  Reg_s0,
+  Reg_s1,
+  Reg_s2,
+  Reg_s3,
+  Reg_s4,
+  Reg_s5,
+  Reg_s6,
+  Reg_s7,
+  Reg_s8,
+  Reg_s9,
+  Reg_s10,
+  Reg_s11,
+}
+
+enum capty_t {
+  Capty_NONE,
+  Capty_MEM,
+  Capty_TSL,
+  Capty_MON,
+  Capty_IPC,
+  Capty_INVALID,
+}
+
+record pmp_t {
+  addr: #[pmp_addr_t; 8ul],
+  cfg: u64,
+}
+
+record trap_t {
+  tpc: word_t, tsp: word_t, epc: word_t, esp: word_t,
+  ecause: word_t, eval: word_t,
+}
+
+record proc_t {
+  state: word_t,
+  regs: #[word_t; 32ul],
+  pmp: #pmp_t,
+  trap: #trap_t,
+  timeout: u64,
+  pid: pid_t,
+}
+
+(* Capability types *)
+
+record tsl_t {
+  owner : pid_t,
+  cfree : fuel_t,
+  csize : fuel_t,
+  hart : hart_t,
+  enabled : bool,
+  base : time_slot_t,
+  size : time_slot_t,
+  free : time_slot_t,
+}
+
+record mem_t {
+  owner : pid_t,
+  cfree : fuel_t,
+  csize : fuel_t,
+  slot : pmp_slot_t,
+  rwx : mem_perm_t,
+  base : mem_addr_t,
+  size : mem_addr_t,
+}
+
+record mon_t {
+  owner : pid_t,
+  cfree : fuel_t,
+  csize : fuel_t,
+  pid : pid_t,
+}
+
+record ipc_t {
+  owner : pid_t,
+  cfree : fuel_t,
+  csize : fuel_t,
+  mode : ipc_mode_t,
+  flag : ipc_flag_t,
+  sink : index_t,
+  source : index_t,
+  opt : u32,
+}
+
+(* Scheduler frame *)
+
+record frame_t {
+  pid: pid_t,
+  length: u64,
+}
+
+(* Kernel state *)
+
+record kstate {
+  procs: #[#proc_t; Config::max_pid],
+  tsl_table: #[#tsl_t; Config::tsl_table_size],
+  mon_table: #[#mon_t; Config::mon_table_size],
+  ipc_table: #[#ipc_t; Config::ipc_table_size],
+  message: #[word_t; 2ul],
+  active_pid: pid_t,
+  errcode: i64,
+}
