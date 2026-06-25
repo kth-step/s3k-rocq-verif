@@ -1,0 +1,12 @@
+-Q . S3K.BarocqComp
+
+common/StateMonads.v
+common/Utils.v
+common/ZlistPlus.v
+common/Barray.v
+common/Res.v
+common/Intop.v
+common/ExtOrdered.v
+common/Ident.v
+common/Option.v
+rocqgen/ShallowNotations.v

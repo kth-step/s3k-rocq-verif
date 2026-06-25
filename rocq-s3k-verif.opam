@@ -7,31 +7,29 @@ dev-repo: "git+https://github.com/kth-step/s3k-rocq-verif.git"
 bug-reports: "https://github.com/kth-step/s3k-rocq-verif/issues"
 license: "BSD-3-Clause"
 
-synopsis: "Executable semantics of S3K"
+synopsis: "Verification in Rocq of Barocq implementation of S3K"
 description: """
 S3K is an experimental bare-metal capability-based separation kernel for RISC-V.
-This package contains executable semantics of S3K.
+This package is about verification in Rocq of a Barocq implementation of S3K.
 """
 
-build: [make "-C" "theories/ExecSem" "-j%{jobs}%"]
-install: [make "-C" "theories/ExecSem" "install"]
+build: [make "-C" "theories/Verif" "-j%{jobs}%"]
+install: [make "-C" "theories/Verif" "install"]
 depends: [
   "rocq-core" {>= "9.0" & < "9.3"}
   "rocq-stdlib"
-  "rocq-stdpp" {>= "1.13.0"}
-  "coq-record-update" {= "0.3.6"}
-  "compcert-ce" {= "3.17-20260508ce"}
+  "coq-vst-zlist" {= "2.13"}
+  "rocq-s3k-barocq-comp" {= "dev"}
+  "rocq-s3k-barocq" {= "dev"}
+  "rocq-s3k-exec-sem" {= "dev"}
 ]
 
 tags: [
   "category:Computer Science/Data Types and Data Structures"
   "keyword:S3K"
-  "keyword:separation kernel"
-  "logpath:S3K.ExecSem"
+  "keyword:Barocq"
+  "logpath:S3K.Verif"
 ]
 authors: [
   "Hanwen Gu"
-  "Henrik Karlsson"
 ]
-
-pin-depends: ["compcert-ce.3.17-20260508ce" "git+https://gitlab.inria.fr/cchavano/compcert-ce.git#barocq-v0.5"]
