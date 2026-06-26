@@ -2,6 +2,8 @@ From stdpp Require Import prelude functions countable gmap.
 From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
 From S3K Require Import util.
+From S3K.BarocqComp Require Import Intop.
+Import IntopNotations.
 
 (** * Process control block definitions *)
 
@@ -40,9 +42,9 @@ Proof. solve_decision. Defined.
 #[export] Instance pmpreg_t_eq_dec : EqDecision pmpreg_t.
 Proof. solve_decision. Defined.
 
-Definition pmpconf_t : Type := (byte * int64).
-Definition regs_t : Type := reg_t -> int64.
-Definition pmp_t : Type := pmpreg_t -> option pmpconf_t.
+Definition pmpconf_t := (byte * int64)%type.
+Definition regs_t := reg_t -> int64.
+Definition pmp_t := pmpreg_t -> option pmpconf_t.
 
 Record proc_t := mk_proc_t {
   pregs : regs_t;
@@ -50,19 +52,18 @@ Record proc_t := mk_proc_t {
   psuspend : bool;
 }.
 
-Definition ptable_t : Type := list proc_t.
+Definition ptable_t := list proc_t.
 
-Definition proc_reg_set (p : proc_t) (reg : reg_t) (val : int64) : proc_t :=
+Definition proc_reg_set (p : proc_t) '(reg, val) : proc_t :=
   p <| pregs ::= <[ reg := val ]> |>.
 
 Definition proc_reg_get (p : proc_t) (reg : reg_t) : int64 :=
   p.(pregs) reg.
 
-Definition proc_pmp_set (p : proc_t) (pmpreg : pmpreg_t) (conf : option pmpconf_t) : proc_t :=
+Definition proc_pmp_set (p : proc_t) '(pmpreg, conf) : proc_t :=
   p <| ppmp ::= <[ pmpreg := conf ]> |>.
 
-Definition ptable_pmp_try_set (ptbl : ptable_t) (p_opt : option nat)
-    (pmpreg_opt : option pmpreg_t) (conf_opt : option pmpconf_t)
+Definition ptable_pmp_try_set (ptbl : ptable_t) '(p_opt, pmpreg_opt, conf_opt)
   : ptable_t :=
   match p_opt with
   | None => ptbl
@@ -73,9 +74,7 @@ Definition ptable_pmp_try_set (ptbl : ptable_t) (p_opt : option nat)
           match ptbl !! p with
           | None => ptbl
           | Some proc =>
-              <[p :=
-                  proc <| ppmp ::= <[pmpreg := conf_opt]> |>
-               ]> ptbl
+              <[p := proc <| ppmp ::= <[pmpreg := conf_opt]> |> ]> ptbl
           end
       end
   end.
@@ -83,7 +82,7 @@ Definition ptable_pmp_try_set (ptbl : ptable_t) (p_opt : option nat)
 Definition proc_pmp_get (p : proc_t) (pmpreg : pmpreg_t) : option pmpconf_t :=
   p.(ppmp) pmpreg.
 
-Definition ptable_pmp_get (ptbl : ptable_t) (p : nat) (pmpreg : pmpreg_t)
+Definition ptable_pmp_get (ptbl : ptable_t) '(p, pmpreg)
   : option pmpconf_t :=
   match ptbl !! p with
   | None => None
@@ -95,10 +94,9 @@ Definition rwx_decode (rwx : byte) : gset perm_t :=
   (if Byte.eq (rwx &₈  Byte.repr 2) (Byte.repr 2) then {[ PERM_WRITE ]} else ∅ ) ∪
   (if Byte.eq (rwx &₈  Byte.repr 4) (Byte.repr 4) then {[ PERM_EXEC ]} else ∅ ).
 
-Definition pmp_decode (pc : pmpconf_t) : gset perm_t * nat * nat :=
-  let '(rwx, addr) := pc in
+Definition pmp_decode '(rwx, addr) : gset perm_t * nat * nat :=
   let perm := rwx_decode rwx in
-  let base := int64_to_n (((addr +₆₄ 1UL) &₆₄ addr) <<₆₄ 2UL) in
-  let size := int64_to_n (((addr +₆₄ 1UL) ^₆₄ addr) +₆₄ 1UL)  in
+  let base := int64_to_nat (((addr +₆₄ 1UL) &₆₄ addr) <<₆₄ 2UL) in
+  let size := int64_to_nat (((addr +₆₄ 1UL) ^₆₄ addr) +₆₄ 1UL)  in
   (perm, base, size).
 
