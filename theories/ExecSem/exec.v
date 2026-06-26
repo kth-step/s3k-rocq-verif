@@ -1,7 +1,7 @@
 From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 From compcert Require Import Integers.
-From S3K Require Import cap kstate util sched proc.
+From S3K Require Import cap kstate util sched proc ctx.
 From S3K.BarocqComp Require Import Intop.
 Import IntopNotations.
 
@@ -115,6 +115,21 @@ Definition exec_mem_pmp_set (kstate : kstate_t) (owner : nat) (i : nat)
             (kstate', err_success 0)
           else
             (kstate, err_invalid_argument)
+      end
+  end.
+
+Definition exec_mon_reg_get '(kstate, ctx) (p : nat) (i : nat) (reg : reg_t)
+  : option (int64 * int64) :=
+  match cap_owner_get kstate.(kmon_tbl) p i with
+  | None => Some (err_invalid_access, Int64.zero)
+  | Some ci =>
+      match kstate.(kptable) !! ci.(cdata).(mpid) with
+      | None => None
+      | Some proc =>
+          if ctx_busy_at ci.(cdata).(mpid) ctx then
+            Some (err_invalid_state, Int64.zero)
+          else
+            Some (err_success 0, proc_reg_get proc reg)
       end
   end.
 
