@@ -3,9 +3,8 @@ From RecordUpdate Require Import RecordUpdate.
 
 (** * Context *)
 
-
 (** Ephemeral kernel state per hart*)
-Record hstate_t := {
+Record hstate_t := mk_hstate_t {
   (* Active process *)
   hcurrent : option nat;
   (* Timeout *)
@@ -13,7 +12,7 @@ Record hstate_t := {
 }.
 
 (** Kernel context, the ephemeral part of the kernel state *)
-Record ctx_t := {
+Record ctx_t := mk_ctx_t {
   (* HW thread -> active process *)
   ctx_hstate : list hstate_t;
   (* PID -> busy flag *)
@@ -40,8 +39,8 @@ Definition ctx_release (h : nat) (ctx : ctx_t) : option ctx_t :=
       | None => None
       | Some p =>
           let hstate' := hstate <| hcurrent := None |> in
-          Some (ctx <| ctx_hstate ::= <[h := hstate']> |>
-                    <| ctx_busy ::= <[p := false]> |>)
+          Some (ctx <| ctx_hstate ::= <[ h := hstate' ]> |>
+                    <| ctx_busy ::= <[ p := false ]> |>)
       end
   end.
 
@@ -60,9 +59,8 @@ Definition ctx_acquire (h : nat) (ctx : ctx_t) (p : nat) (to_opt : option nat)
                  | Some to => to
                  end
             |> in
-          Some (ctx
-                <| ctx_busy ::= <[p := true]> |>
-                <| ctx_hstate ::= <[h := hstate']> |>)
+          Some (ctx <| ctx_busy ::= <[ p := true ]> |>
+                    <| ctx_hstate ::= <[ h := hstate' ]> |>)
       | Some _ => None
       end
   end.
