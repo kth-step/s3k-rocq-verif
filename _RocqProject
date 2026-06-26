@@ -14,8 +14,11 @@ theories/BarocqComp/rocqgen/ShallowNotations.v
 theories/Barocq/S3K_ShallowR.v
 
 theories/ExecSem/util.v
-theories/ExecSem/core_cap.v
-theories/ExecSem/core_tsl.v
-theories/ExecSem/exec_sched.v
+theories/ExecSem/cap.v
+theories/ExecSem/ctx.v
+theories/ExecSem/proc.v
+theories/ExecSem/sched.v
+theories/ExecSem/kstate.v
+theories/ExecSem/exec.v
 
 theories/Verif/test.v

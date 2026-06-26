@@ -21,6 +21,7 @@ depends: [
   "rocq-stdpp" {>= "1.13.0"}
   "coq-record-update" {= "0.3.6"}
   "compcert-ce" {= "3.17-20260508ce"}
+  "rocq-s3k-barocq-comp" {= "dev"}
 ]
 
 tags: [
