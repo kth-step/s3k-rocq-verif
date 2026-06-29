@@ -1,8 +1,9 @@
 From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 From compcert Require Import Integers.
-From S3K Require Import cap kstate util sched proc ctx.
+From S3K.ExecSem Require Import cap kstate util sched proc ctx.
 From S3K.BarocqComp Require Import Intop.
+
 Import IntopNotations.
 
 (** * Executable semantics for S3K *)
