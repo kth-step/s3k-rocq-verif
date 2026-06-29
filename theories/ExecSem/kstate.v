@@ -1,7 +1,7 @@
 From stdpp Require Import prelude.
-From S3K Require Import cap proc sched.
+From S3K.ExecSem Require Import cap proc sched.
 
-(** * Core kernel state *)
+(** * Core kernel state definitions *)
 
 Record kstate_t := mk_kstate_t {
   kptable : ptable_t;
@@ -10,4 +10,3 @@ Record kstate_t := mk_kstate_t {
   kmem_tbl : mem_table_t;
   ksched : sched_t;
 }.
-

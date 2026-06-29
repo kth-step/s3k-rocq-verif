@@ -1,22 +1,23 @@
 From stdpp Require Import prelude functions countable gmap.
 From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
-From S3K Require Import util.
+From S3K.ExecSem Require Import util.
 From S3K.BarocqComp Require Import Intop.
+
 Import IntopNotations.
 
 (** * Process control block definitions *)
 
 Inductive perm_t := PERM_READ | PERM_WRITE | PERM_EXEC.
 
-Inductive reg_t :=
-  | REG_PC | REG_RA | REG_SP | REG_GP | REG_TP
-  | REG_T0 | REG_T1 | REG_T2 | REG_T3 | REG_T4 | REG_T5 | REG_T6 | REG_T7
-  | REG_A0 | REG_A1 | REG_A2 | REG_A3 | REG_A4 | REG_A5 | REG_A6 | REG_A7
-  | REG_S0 | REG_S1 | REG_S2 | REG_S3 | REG_S4 | REG_S5 | REG_S6 | REG_S7 | REG_S8 | REG_S9 | REG_S10 | REG_S11.
+Inductive reg_t := REG_PC | REG_RA | REG_SP | REG_GP | REG_TP
+ | REG_T0 | REG_T1 | REG_T2 | REG_T3 | REG_T4 | REG_T5 | REG_T6 | REG_T7
+ | REG_A0 | REG_A1 | REG_A2 | REG_A3 | REG_A4 | REG_A5 | REG_A6 | REG_A7
+ | REG_S0 | REG_S1 | REG_S2 | REG_S3 | REG_S4 | REG_S5 | REG_S6 | REG_S7
+ | REG_S8 | REG_S9 | REG_S10 | REG_S11.
 
-Inductive pmpreg_t :=
-    PMP_REG0 | PMP_REG1 | PMP_REG2 | PMP_REG3 | PMP_REG4 | PMP_REG5 | PMP_REG6 | PMP_REG7.
+Inductive pmpreg_t := PMP_REG0 | PMP_REG1 | PMP_REG2
+ | PMP_REG3 | PMP_REG4 | PMP_REG5 | PMP_REG6 | PMP_REG7.
 
 #[export] Instance perm_t_eq_dec : EqDecision perm_t.
 Proof. solve_decision. Defined.

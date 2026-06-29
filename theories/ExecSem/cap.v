@@ -1,15 +1,16 @@
 From stdpp Require Import prelude gmap.
-From S3K Require Import proc.
+From S3K.ExecSem Require Import proc.
 
 Set Implicit Arguments.
+
+(** * Capability definitions *)
 
 Section Cap.
 
 Variable A : Type.
 
-(** * Capability definitions *)
-
 (** ** Capability datatypes *)
+
 Record cap_t := mk_cap_t {
   cowner : option nat;
   cfree : nat;
@@ -35,13 +36,13 @@ Definition cap_owner_get (τ : cap_table_t) (p : nat) (i : nat) : option cap_t :
   end.
 
 Definition cap_set (ct : cap_table_t) '(i, v)  : cap_table_t :=
-  match ct with CapTable l => CapTable (<[i := v]> l) end.
+  match ct with CapTable l => CapTable (<[ i := v ]> l) end.
 
 End Cap.
 
 (** ** Monitor table *)
 
-Record mon_t := {
+Record mon_t := mk_mon_t {
   mpid : nat
 }.
 
@@ -49,7 +50,7 @@ Definition mon_table_t := cap_table_t mon_t.
 
 (** ** Time slice table *)
 
-Record tsl_t := {
+Record tsl_t := mk_tsl_t {
   thart : nat;
   tbase : nat;
   tsize : nat;
@@ -60,7 +61,7 @@ Definition tsl_table_t := cap_table_t tsl_t.
 
 (** ** Memory table *)
 
-Record mem_t := {
+Record mem_t := mk_mem_t {
   mbase : nat;
   msize : nat;
   mslot : option pmpreg_t;

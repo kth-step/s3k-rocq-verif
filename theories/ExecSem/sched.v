@@ -14,15 +14,14 @@ Definition hsched_size (h : hsched_t) : nat :=
 Definition hsched_set 
     (h : hsched_t) (i : nat) (p_opt : option nat) (len : nat)
   : hsched_t :=
-  match h with HSched hsched => HSched (<[i := (p_opt, len)]> hsched) end.
+  match h with HSched hsched => HSched (<[ i := (p_opt, len) ]> hsched) end.
 
 Definition sched_set
     (sched : sched_t) (h i : nat) (p_opt : option nat) (len : nat)
   : sched_t :=
   match sched !! h with
   | None => sched
-  | Some hsched =>
-      <[h := hsched_set hsched i p_opt len]> sched
+  | Some hsched => <[ h := hsched_set hsched i p_opt len ]> sched
   end.
 
 Definition hsched_get (h : hsched_t) (i : nat) : option (option nat * nat) :=

@@ -1,7 +1,7 @@
 From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 
-(** * Context *)
+(** * Context definitions *)
 
 (** Ephemeral kernel state per hart*)
 Record hstate_t := mk_hstate_t {
