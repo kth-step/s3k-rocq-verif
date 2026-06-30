@@ -46,6 +46,24 @@ Definition exec_mon_introspect (kstate: kstate_t) (owner i j: nat) : option (int
       Some (err_invalid_access, Int64.zero)
   end.
 
+Definition exec_mon_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option (kstate_t * int64) :=
+  match cap_owner_get kstate.(kmon_tbl) owner i with
+  | None => Some (kstate, err_invalid_access)
+  | Some ci =>
+    if decide (ci.(cfree) < ci.(csize)) then
+      let j := i + ci.(cfree) in
+      match cap_get kstate.(kmon_tbl) j with
+      | None => None
+      | Some cj =>
+        let ci' := ci <| (@cfree mon_t) := ci.(cfree) + cj.(cfree) |> in
+        let kmon_tbl' := cap_set (cap_set kstate.(kmon_tbl) (i, (Some ci'))) (j, None) in
+        let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
+        Some (kstate', err_success (ci'.(csize) - ci'.(cfree)))
+      end
+    else 
+      Some (kstate, err_success 0)
+  end.
+
 Definition exec_mon_delete (kstate : kstate_t) (owner : nat) (i : nat) : (kstate_t * int64):=
   match cap_owner_get kstate.(kmon_tbl) owner i with
   | None => (kstate, err_invalid_access)
@@ -62,9 +80,7 @@ Definition exec_tsl_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option 
   match cap_owner_get kstate.(ktsl_tbl) owner i with
   | None => Some (kstate, err_invalid_access)
   | Some ci =>
-    if decide (ci.(cfree) = ci.(csize)) then
-      Some (kstate, err_success 0)
-    else 
+    if decide (ci.(cfree) < ci.(csize)) then
       let j := i + ci.(cfree) in
       match cap_get kstate.(ktsl_tbl) j with
       | None => None
@@ -84,6 +100,8 @@ Definition exec_tsl_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option 
         let kstate' := kstate <| ktsl_tbl := ktsl_tbl' |> <| ksched := ksched' |> in
         Some (kstate', err_success (ci'.(csize) - ci'.(cfree)))
       end
+    else 
+      Some (kstate, err_success 0)
   end.
 
 
