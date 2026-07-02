@@ -23,6 +23,5 @@ theories/ExecSem/exec.v
 
 theories/Verif/repr.v
 theories/Verif/inv.v
-theories/Verif/tactics.v
 theories/Verif/aux.v
 theories/Verif/refine.v
