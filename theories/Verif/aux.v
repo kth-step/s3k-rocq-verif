@@ -1,7 +1,7 @@
 From stdpp Require Import prelude.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import cap.
-From S3K.Verif Require Import repr tactics.
+From S3K.Verif Require Import repr.
 From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.

@@ -2,7 +2,7 @@ From stdpp Require Import prelude.
 From compcert Require Import Integers.
 From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util.
-From S3K.Verif Require Import repr tactics aux.
+From S3K.Verif Require Import repr aux.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
 From RecordUpdate Require Import RecordUpdate.
@@ -18,7 +18,7 @@ Theorem mon_valid_access_safe :
 Proof.
   unfold Mon_valid_access.
   intros.
-  find_if.
+  case_match.
   - solve_get.
     + rewrite mon_table_len.
       apply nat_lt_iff_int64_ltu.
