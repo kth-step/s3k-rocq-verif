@@ -1,6 +1,7 @@
 -Q . S3K.Verif
 
 repr.v
-inv.v
-aux.v
+invariants.v
+barocq_aux.v
+tactics.v
 refine.v
