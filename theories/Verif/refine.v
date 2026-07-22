@@ -72,7 +72,8 @@ Hint Extern 1 (Rtsl_table _ _) => progress simpl : s3k_inv.
 Hint Extern 1 (Rptable _ _) => progress simpl : s3k_inv.
 (** Replace CapTable l with canonical form *)
 Hint Extern 1 (Rmon_table (CapTable _) _) =>
-  match! goal with | [ h : _ = CapTable _ |- _ ] => let h := Control.hyp h in rewrite <- $h end.
+  match! goal with | [ h : _ = CapTable _ |- _ ] => let h := Control.hyp h in rewrite <- $h end
+  : s3k_inv.
 
 Opaque cap_set.
 
@@ -114,8 +115,6 @@ Ltac2 forward_abstract_opt_cap (t : constr) :=
        false in this case. *)
     erewrite Rmon_None_corres by eauto
   ].
-
-About mon_lookup_Some_len.
 
 (* Forward reasoning on the result of abstract capability lookup,
 derive the corresponding conditions in the concrete model. *)
@@ -244,6 +243,22 @@ Theorem mon_delele_safe_refine :
 Proof.
   intros.
   unfold exec_mon_delete, Mon_delete.
+  ltac1:(autounfold with s3k_unfold).
+  repeat (forward_abstract ()).
+  forward_concrete_map_set ().
+  all: solve_corres ().
+Qed.
+
+Theorem mon_transfer_safe_refine :
+  forall ownera ownerb ia ib new_ownera new_ownerb,
+  Rkstate ka kb ->
+  Rpid_opt (Some ownera) ownerb ->
+  Rnat ia ib ->
+  Rpid_opt (Some new_ownera) new_ownerb ->
+  safe_refine Rkstate_with_err (exec_mon_transfer ka ownera ia new_ownera) (Mon_transfer kb ownerb ib new_ownerb).
+Proof.
+  intros.
+  unfold exec_mon_transfer, Mon_transfer.
   ltac1:(autounfold with s3k_unfold).
   repeat (forward_abstract ()).
   forward_concrete_map_set ().
