@@ -38,6 +38,9 @@ Definition cap_owner_get (τ : cap_table_t) (p : nat) (i : nat) : option cap_t :
 Definition cap_set (ct : cap_table_t) '(i, v)  : cap_table_t :=
   match ct with CapTable l => CapTable (<[ i := v ]> l) end.
 
+Definition ctable_size (ct : cap_table_t) : nat :=
+  match ct with CapTable l => length l end.
+
 End Cap.
 
 (** ** Monitor table *)

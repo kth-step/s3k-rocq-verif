@@ -508,15 +508,17 @@ Definition Config_ipc_table_size : u64 := 16UL.
 
 Definition Error_success : i64 := 0L.
 
-Definition Error_invalid_access : i64 := (-1)L.
+Definition Error_invalid_syscall : i64 := (-1)L.
 
-Definition Error_invalid_argument : i64 := (-2)L.
+Definition Error_invalid_access : i64 := (-2)L.
 
-Definition Error_invalid_state : i64 := (-3)L.
+Definition Error_invalid_argument : i64 := (-3)L.
 
-Definition Error_slot_in_use : i64 := (-4)L.
+Definition Error_invalid_state : i64 := (-4)L.
 
-Definition Error_timeout : i64 := (-5)L.
+Definition Error_slot_in_use : i64 := (-5)L.
+
+Definition Error_timeout : i64 := (-6)L.
 
 Definition Error_continue : i64 := 1L.
 

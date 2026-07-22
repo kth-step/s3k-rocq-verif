@@ -1,6 +1,7 @@
 -Q . S3K.ExecSem
 
 util.v
+config.v
 cap.v
 ctx.v
 proc.v
