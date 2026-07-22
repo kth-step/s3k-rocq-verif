@@ -92,20 +92,17 @@ Definition exec_mon_derive (kstate : kstate_t) (owner i csize : nat) : option (k
         Some (kstate, err_invalid_argument)
       else
       let j := i + ci.(cfree) - csize in
-      match kstate.(kmon_tbl) with CapTable t =>
-        match t !! j with
-        | None => None
-        | Some _ =>
-          let ci' := ci <| (@cfree mon_t) := ci.(cfree) - csize |> in
-          let cj := {| cowner := Some owner;
-                       cfree := csize;
-                       csize := csize;
-                       cdata := ci.(cdata); |} in
-          let kmon_tbl' := cap_set (cap_set kstate.(kmon_tbl) (i, Some ci')) (j, Some cj) in
-          let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
-          Some (kstate', err_success j)
-        end
-      end
+      if cap_idx_valid kstate.(kmon_tbl) j then
+        let ci' := ci <| (@cfree mon_t) := ci.(cfree) - csize |> in
+        let cj := {| cowner := Some owner;
+                     cfree := csize;
+                     csize := csize;
+                     cdata := ci.(cdata); |} in
+        let kmon_tbl' := cap_set (cap_set kstate.(kmon_tbl) (i, Some ci')) (j, Some cj) in
+        let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
+        Some (kstate', err_success j)
+      else
+        None
   end.
 
 (** ** Time slice operations *)
