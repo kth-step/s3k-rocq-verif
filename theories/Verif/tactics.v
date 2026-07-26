@@ -1,7 +1,46 @@
 From stdpp Require Import prelude.
 From compcert Require Import Coqlib Integers.
+From Ltac2 Require Ltac2.
 
 (** * Tactics *)
+
+(** Ltac2 utilities *)
+Module Ltac2.
+
+Import Ltac2.
+
+Ltac2 fail_with_msg (s : string) := Control.backtrack_tactic_failure s.
+
+Ltac2 Notation "trivial_erewrite"
+  rw(list1(rewriting, ","))
+  cl(opt(clause))
+  tac(opt(seq("by", thunk(tactic)))) :=
+  unshelve (rewrite0 true rw cl tac); auto; Control.assert_true (Int.equal (Control.numgoals ()) 1).
+
+Ltac2 has_hyp_of_type (ty : constr) : bool :=
+  List.exist
+    (fun (_, _, hyp_ty) => Constr.equal hyp_ty ty)
+    (Control.hyps ()).
+
+Ltac2 pose_proof (id : ident option) (t : constr) :=
+  match id with
+  | Some id => pose ($id := $t); Std.clearbody [id]
+  | None =>
+    let h := Fresh.in_goal @H in
+    pose ($h := $t); Std.clearbody [h]
+  end.
+
+Ltac2 Notation "pose" "proof" t(open_constr) id(opt(seq("as", ident))):= pose_proof id t.
+
+Ltac2 extend (t : constr) :=
+  if has_hyp_of_type (Constr.type t) then 
+    fail
+  else
+    pose_proof None t.
+
+Ltac2 Notation "extend" t(open_constr) := extend t.
+
+End Ltac2.
 
 (** Normalize Int64 comparisons into Z comparisons *)
 Lemma ltu_true :
@@ -36,18 +75,24 @@ Proof.
   - unfold Int64.eq. destruct zeq; [ contradiction | reflexivity ].
 Qed.
 
+Ltac norm_bool :=
+  repeat rewrite
+    ?negb_true_iff, ?negb_false_iff,
+    ?orb_true_iff, ?orb_false_iff,
+    ?andb_true_iff, ?andb_false_iff.
+
 Ltac norm_cmp :=
   unfold Int64.cmpu, Int64.cmp;
-  repeat rewrite ?negb_true_iff, ?negb_false_iff;
   repeat rewrite ?eq_true, ?eq_false, ?ltu_true, ?ltu_false.
 
 Tactic Notation "norm_cmp" "in" hyp(H) :=
   unfold Int64.cmpu, Int64.cmp in H;
-  repeat rewrite ?negb_true_iff, ?negb_false_iff in H;
   repeat rewrite ?eq_true, ?eq_false, ?ltu_true, ?ltu_false in H.
 
 Tactic Notation "norm_cmp" "in" "*" :=
   repeat_on_hyps (fun H => norm_cmp in H); norm_cmp.
+
+Ltac norm_bool_cmp := norm_bool; norm_cmp.
 
 (** rep_lia from VST *)
 

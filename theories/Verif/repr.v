@@ -145,16 +145,14 @@ Hint Unfold Rtsl_table Rmon_table Rptable Rctx Rkstate Rkstate_with_err : s3k_re
 (* FIXME this is ignoring memory table and scheduler for now. *)
 Lemma Rkstate_inv :
   forall ka kb,
-  (Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) /\
-   Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) /\
-   Rptable ka.(kptable) kb.(types_kstate_procs)) ->
+  Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) ->
+  Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) ->
+  Rptable ka.(kptable) kb.(types_kstate_procs) ->
   Rkstate ka kb.
 Proof.
   autounfold with s3k_repr_unfold.
   intros.
-  unfold kstate_up.
-  destruct_and?.
-  rewrite H0, H2, H.
+  rewrite H0, H, H1.
 Admitted.
 
 Lemma Rmon_table_inv_Rkstate :
@@ -254,6 +252,38 @@ Proof.
   - congruence.
 Qed.
 
+Lemma Rmon_set_cfree :
+  forall mona monb cfreea cfreeb,
+  Rmon (Some mona) monb ->
+  Rnat cfreea cfreeb ->
+  cfreea <> O ->
+  let monb' := monb <| types_mon_t_cfree := cfreeb |> in
+  let mona' := mona <| (@cfree mon_t) := cfreea |> in
+  Rmon (Some mona') monb'.
+Proof.
+  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
+  intros.
+  case_match; try discriminate. 
+  unfold Rnat, fun_hrel in H0.
+  repeat case_match; try discriminate; simpl in *. 
+  - congruence.
+  - inv H.
+  - inv H. repeat f_equal. simpl. congruence.
+  - inv H.
+Qed.
+
+Lemma Rmon_inv :
+  forall mona monb,
+  Rpid_opt mona.(cowner) monb.(types_mon_t_owner) ->
+  Rnat mona.(cfree) monb.(types_mon_t_cfree) ->
+  mona.(cfree) <> O ->
+  Rnat mona.(csize) monb.(types_mon_t_csize) ->
+  Rpid_opt (Some mona.(cdata).(mpid)) monb.(types_mon_t_pid) ->
+  Rmon (Some mona) monb.
+Proof.
+  intros.
+Admitted.
+
 (** Lemmas used for forward reasoning *)
 
 Lemma Rmon_Some_corres :
@@ -271,6 +301,16 @@ Proof.
   by repeat split.
 Qed.
 
+Lemma Rpid_opt_inv_Rmon :
+  forall va vb,
+  Rmon (Some va) vb ->
+  Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid).
+Proof.
+  intros.
+  apply Rmon_Some_corres in H.
+  tauto.
+Qed.
+  
 Lemma mon_get_Some_corres :
   forall ta tb ia ib va,
   Rmon_table (CapTable ta) tb ->
@@ -325,6 +365,22 @@ Proof.
   - inv H. rep_lia.
   - f_equal. rep_lia.
 Qed.
+
+Lemma Rmon_table_len_same :
+  forall ta tb,
+  Rmon_table (CapTable ta) tb ->
+  length ta = length tb.
+Proof.
+Admitted.
+
+Lemma lookup_Some_bget_safe {A} {B} :
+  forall (ta : list A) (tb : list B) ia ib va,
+  ta !! ia = Some va ->
+  Rnat ia ib ->
+  length ta = length tb ->
+  exists vb, tb.[ib] = Some vb.
+Proof.
+Admitted.
 
 Section Length.
 

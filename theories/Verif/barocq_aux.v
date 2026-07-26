@@ -92,5 +92,15 @@ Lemma bget_Some_bset_Some :
 Proof.
 Admitted.
 
+
+Lemma bset_length :
+  forall (t : list A) i v t',
+  t.[i <- v] = Some t' ->
+  length t' = length t.
+Proof.
+  intros.
+  rewrite (bset_Some_insert _ _ _ H).
+  apply length_insert.
+Qed.
 End Barray.
 
