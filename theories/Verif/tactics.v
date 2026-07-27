@@ -58,6 +58,12 @@ Ltac2 Notation "extend" t(open_constr) := extend t.
 
 End Ltac2.
 
+(** General tactics *)
+Tactic Notation "case_match" "in" ident(H) :=
+  match type of H with
+  | context [ match ?x with _ => _ end ] => destruct x eqn:?
+  end.
+
 (** Normalize Int64 comparisons into Z comparisons *)
 Lemma ltu_true :
   forall x y, Int64.ltu x y = true <-> (Int64.unsigned x) < (Int64.unsigned y).

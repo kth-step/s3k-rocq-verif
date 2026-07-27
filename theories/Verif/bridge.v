@@ -2,6 +2,7 @@ From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import kstate cap exec.
+From S3K.Verif Require Import tactics.
 
 Definition exec_mon_revoke' (kstate : kstate_t) (owner : nat) (i : nat) : option (kstate_t * int64) :=
   match cap_owner_get kstate.(kmon_tbl) owner i with
@@ -25,3 +26,33 @@ Definition exec_mon_revoke' (kstate : kstate_t) (owner : nat) (i : nat) : option
     else 
       Some (kstate, err_success 0)
   end.
+
+Section Bridge.
+
+Variable k : kstate_t.
+
+Hypothesis cfree_gt_0 :
+  forall i v, cap_get k.(kmon_tbl) i = Some v ->
+  v.(cfree) > 0.
+
+Theorem mon_revoke_bridge :
+  forall owner i,
+  exec_mon_revoke' k owner i = exec_mon_revoke k owner i.
+Proof.
+  intros.
+  unfold exec_mon_revoke, exec_mon_revoke'.
+  repeat case_match; try reflexivity.
+  unfold cap_set in H2.
+  case_match in H2.
+  simpl in H2.
+  rewrite list_lookup_insert_ne in H2.
+  - simpl in H1.
+    simplify_eq.
+  - unfold cap_owner_get in H.
+    repeat case_match in H; try discriminate.
+    simplify_eq.
+    apply cfree_gt_0 in Heqo.
+    lia.
+Qed.
+
+End Bridge.
