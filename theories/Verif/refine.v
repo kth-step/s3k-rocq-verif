@@ -69,7 +69,7 @@ Hint Resolve safe_refine_opt_None safe_refine_opt_Some safe_refine_Some : s3k_in
 Hint Resolve Rkstate_inv Rkstate_with_err_inv : s3k_inv.
 Hint Resolve Rmon_table_set Rmon_set_owner Rmon_set_cfree : s3k_inv.
 Hint Resolve Rmon_table_inv_Rkstate Rtsl_table_inv_Rkstate Rptable_inv_Rkstate : s3k_inv.
-Hint Resolve Rmon_inv : s3k_inv.
+Hint Resolve Rmon_Some_inv Rmon_None_inv : s3k_inv.
 Hint Resolve Rpid_opt_inv_Rmon : s3k_inv.
 
 Hint Extern 0 (Rpid_opt _ _) => reflexivity : s3k_inv.
@@ -119,9 +119,11 @@ Ltac2 forward_range1 () :=
     extend (lookup_lt_Some _ _ _ $h)
   | [ |- context[cfree ?c]] =>
     (* Range for capability field cfree - always <= table size if wellformed *)
-    let p := '(cfree $c <= MON_SZ)%nat in
-    if has_hyp_of_type p then fail
-    else assert $p by eauto
+    assert_if_new (cfree $c <= MON_SZ)%nat
+  | [ |- context[csize ?c]] =>
+    assert_if_new (csize $c <= MON_SZ)%nat
+  | [ |- context[(cfree ?ci + cfree ?cj)%nat]] =>
+      assert_if_new ($ci.(cfree) + $cj.(cfree) <= $ci.(csize))%nat
   end.
 
 Ltac2 Notation "forward_range" :=
@@ -145,8 +147,6 @@ Ltac2 solve_corres () :=
 (** Derive finer correspondence results from the hypotheses. *)
 Ltac2 forward_hyp_corres1 () :=
   match! goal with
-  | [ h : Rmon (Some ?va) ?vb |- context[?vb] ] =>
-      apply Rmon_Some_corres in $h; ltac1:(h |- destruct_and? h) (Ltac1.of_ident h)
   | [ h1 : Rpid_opt ?ova ?vb,
       h2 : Rpid_opt ?ova' ?vb' |- context[?vb] ] =>
       let h1 := Control.hyp h1 in
@@ -188,9 +188,16 @@ Ltac2 get_or_solve_corres (t : constr) : constr :=
 
 (** Case analysis on whether an abstract capability is physically deleted or not. *)
 Ltac2 forward_abstract_opt_cap (t : constr) :=
-  destruct $t >
-  [ (* Some case, do nothing. *)
-    ()
+  destruct $t eqn:? >
+  [ (* Some case, introduce capability field correspondence.results. *)
+    match! goal with
+    | [ hget : ?tlookup = Some ?va,
+        h : Rmon (Some ?va) ?vb |- _ ] =>
+      Control.assert_true (Constr.equal t tlookup);
+      let h := Control.hyp h in
+      let h' := @HRmon_corres in
+      pose proof (Rmon_Some_corres $h) as $h'; destruct_and? $h'
+    end
   |
     (* None case *)
     (* Since in principle a system call should never touch a physically deleted
@@ -282,7 +289,7 @@ Ltac2 forward_abstract_lookup (h : constr) :=
 Ltac2 solve_concrete_cond () :=
   printf "Trying to solve concrete condition: %t" (Control.goal ());
   (* normalize hypotheses *)
-  ltac1:(destruct_and?; destruct_or?);
+  destruct_and?; destruct_or?;
   forward_hyp_corres;
   (* normalize goal *)
   ltac1:(autounfold with s3k_arith in *);
@@ -346,6 +353,19 @@ Hypothesis cfree_range :
   ka.(kmon_tbl) = CapTable l ->
   (v.(cfree) <= MON_SZ)%nat.
 
+Hypothesis csize_range :
+  forall l i v,
+  l !! i = Some (Some v) ->
+  ka.(kmon_tbl) = CapTable l ->
+  (v.(csize) <= MON_SZ)%nat.
+
+Hypothesis next_child_range :
+  forall l i vi vj,
+  l !! i = Some (Some vi) ->
+  l !! (i + vi.(cfree))%nat = Some (Some vj) ->
+  ka.(kmon_tbl) = CapTable l ->
+  (vi.(cfree) + vj.(cfree) <= vi.(csize))%nat.
+
 Theorem mon_delele_safe_refine :
   forall ownera ownerb ia ib,
   Rkstate ka kb ->
@@ -385,6 +405,22 @@ Theorem mon_derive_safe_refine :
 Proof.
   intros. 
   unfold exec_mon_derive, Mon_derive.
+  ltac1:(autounfold with s3k_unfold).
+  repeat (forward_abstract ()).
+  all: solve_corres ().
+Qed.
+
+From S3K.Verif Require Import bridge.
+
+Theorem mon_revoke_safe_refine :
+  forall ownera ownerb ia ib,
+  Rkstate ka kb ->
+  Rpid_opt (Some ownera) ownerb ->
+  Rnat ia ib ->
+  safe_refine_opt Rkstate_with_err (exec_mon_revoke' ka ownera ia) (Mon_revoke kb ownerb ib).
+Proof.
+  intros.
+  unfold exec_mon_revoke', Mon_revoke, Mon_revoke_once.
   ltac1:(autounfold with s3k_unfold).
   repeat (forward_abstract ()).
   all: solve_corres ().

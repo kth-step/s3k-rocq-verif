@@ -272,7 +272,20 @@ Proof.
   - inv H.
 Qed.
 
-Lemma Rmon_inv :
+Lemma Rmon_None_inv :
+  forall csize pa pb,
+  Rpid_opt (Some pa) pb ->
+  Rmon None {|
+    types_mon_t_owner := 0 L;
+    types_mon_t_cfree := 0 L;
+    types_mon_t_csize := csize;
+    types_mon_t_pid := pb;
+  |}.
+Proof.
+Admitted.
+
+
+Lemma Rmon_Some_inv :
   forall mona monb,
   Rpid_opt mona.(cowner) monb.(types_mon_t_owner) ->
   Rnat mona.(cfree) monb.(types_mon_t_cfree) ->
@@ -292,7 +305,8 @@ Lemma Rmon_Some_corres :
   Rpid_opt va.(cowner) vb.(types_mon_t_owner) /\
     Rnat va.(cfree) vb.(types_mon_t_cfree) /\
     Rnat va.(csize) vb.(types_mon_t_csize) /\
-    Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid).
+    Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid) /\
+    va.(cfree) <> O.
 Proof.
   intros.
   unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt in H.

@@ -869,14 +869,18 @@ Definition Mon_revoke_once (ks: Types_kstate) (i: u64) : option Types_kstate :=
       let* b3 := mon_table.[i] in
       ret (i +₆₄ b3.(types_mon_t_cfree))
     in
-    let* cap_j := mon_table.[j] in
-    let j_cfree := cap_j.(types_mon_t_cfree) in
-    let cap_j := (cap_j <| types_mon_t_owner := 0UL |>) <| types_mon_t_cfree := 0UL |> in
-    let* mon_table := mon_table.[j <- cap_j] in
+    let* j_cfree :=
+      let* b4 := mon_table.[j] in
+      ret b4.(types_mon_t_cfree)
+    in
     let* cap_i := mon_table.[i] in
     let cap_i := cap_i <| types_mon_t_cfree := cap_i.(types_mon_t_cfree) +₆₄ j_cfree |> in
     let errcode := cap_i.(types_mon_t_csize) -₆₄ cap_i.(types_mon_t_cfree) in
     let* mon_table := mon_table.[i <- cap_i] in
+    let* mon_table :=
+      let* b5 := mon_table.[j] in
+      mon_table.[j <- ((b5 <| types_mon_t_owner := 0UL |>) <| types_mon_t_cfree := 0UL |>)]
+    in
     ret ((ks <| types_kstate_mon_table := mon_table |>) <| types_kstate_errcode := I64.of_u64 errcode |>)
   else
     ret (ks <| types_kstate_errcode := Error_success |>).

@@ -1,5 +1,6 @@
 -Q . S3K.Verif
 
+bridge.v
 repr.v
 invariants.v
 barocq_aux.v

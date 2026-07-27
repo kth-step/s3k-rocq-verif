@@ -11,6 +11,18 @@ Import Ltac2.
 
 Ltac2 fail_with_msg (s : string) := Control.backtrack_tactic_failure s.
 
+Ltac2 Notation "destruct_and" "?" h(opt(ident)) := 
+  match h with
+  | Some h => ltac1:(h |- destruct_and? h) (Ltac1.of_ident h)
+  | None => ltac1:(destruct_and?)
+  end.
+
+Ltac2 Notation "destruct_or" "?" h(opt(ident)) :=
+  match h with
+  | Some h => ltac1:(h |- destruct_or? h) (Ltac1.of_ident h)
+  | None => ltac1:(destruct_or?)
+  end.
+
 Ltac2 Notation "trivial_erewrite"
   rw(list1(rewriting, ","))
   cl(opt(clause))
@@ -21,6 +33,10 @@ Ltac2 has_hyp_of_type (ty : constr) : bool :=
   List.exist
     (fun (_, _, hyp_ty) => Constr.equal hyp_ty ty)
     (Control.hyps ()).
+
+Ltac2 Notation "assert_if_new" t(open_constr) :=
+  if has_hyp_of_type t then fail
+  else assert $t by eauto.
 
 Ltac2 pose_proof (id : ident option) (t : constr) :=
   match id with
