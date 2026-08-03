@@ -11,7 +11,7 @@ Definition sched_t := list hsched_t.
 Definition hsched_size (h : hsched_t) : nat :=
   match h with HSched hsched => length hsched end.
 
-Definition hsched_set  (h : hsched_t) '(i, p_opt, len) : hsched_t :=
+Definition hsched_set (h : hsched_t) '(i, p_opt, len) : hsched_t :=
   match h with HSched hsched => HSched (<[ i := (p_opt, len) ]> hsched) end.
 
 Definition sched_set (sched : sched_t) '(h, i, p_opt, len) : sched_t :=

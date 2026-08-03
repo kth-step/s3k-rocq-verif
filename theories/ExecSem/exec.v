@@ -107,12 +107,12 @@ Definition exec_mon_derive (kstate : kstate_t) (owner i csize : nat) : option (k
 
 (** ** Time slice operations *)
 
-Definition exec_tsl_transfer (kstate : kstate_t) (owner i target : nat) : (kstate_t * int64) :=
+Definition exec_tsl_transfer (kstate : kstate_t) (owner i target : nat) : kstate_t * int64 :=
   match cap_owner_get kstate.(ktsl_tbl) owner i with
   | None => (kstate, err_invalid_access)
   | Some ci => 
       let ci' := ci <| (@cowner tsl_t) := Some target |> in
-      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, (Some ci')) in
+      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, Some ci') in
       let ksched' :=
         if decide (ci.(cdata).(tfree) <> O) then
           sched_set kstate.(ksched) (ci.(cdata).(thart), ci.(cdata).(tbase), Some target, ci.(cdata).(tfree))
@@ -183,7 +183,7 @@ Definition exec_tsl_delete (kstate : kstate_t) (owner : nat) (i : nat) : (kstate
   | None => (kstate, err_invalid_access)
   | Some ci => 
       let ci' := ci <| (@cowner tsl_t) := None |> in
-      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, (Some ci')) in
+      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, Some ci') in
       let ksched' :=
         if decide (ci.(cdata).(tfree) ≠ 0) then
           sched_set kstate.(ksched) (ci'.(cdata).(thart), ci'.(cdata).(tbase), ci'.(cowner), ci'.(cdata).(tfree))
