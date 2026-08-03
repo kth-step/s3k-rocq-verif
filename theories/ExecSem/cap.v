@@ -39,7 +39,7 @@ Definition cap_idx_valid (ct : cap_table_t) (i : nat) : bool :=
   match ct with CapTable l =>
     match l !! i with
     | None => false
-    | Some _ => true
+    | Some v => true
     end
   end.
 

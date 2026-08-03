@@ -46,12 +46,12 @@ Definition exec_mon_introspect (kstate: kstate_t) (owner i j: nat) : option (int
       Some (err_invalid_access, Int64.zero)
   end.
 
-Definition exec_mon_transfer (kstate : kstate_t) (owner i target : nat) : (kstate_t * int64):=
+Definition exec_mon_transfer (kstate : kstate_t) (owner i target : nat) : (kstate_t * int64) :=
   match cap_owner_get kstate.(kmon_tbl) owner i with
   | None => (kstate, err_invalid_access)
   | Some ci => 
       let ci' := ci <| (@cowner mon_t) := Some target |> in
-      let kmon_tbl' := cap_set kstate.(kmon_tbl) (i, (Some ci')) in
+      let kmon_tbl' := cap_set kstate.(kmon_tbl) (i, Some ci') in
       let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
       (kstate', err_success 0)
   end.

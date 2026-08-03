@@ -75,7 +75,7 @@ Definition ptable_pmp_try_set (ptbl : ptable_t) '(p_opt, pmpreg_opt, conf_opt)
           match ptbl !! p with
           | None => ptbl
           | Some proc =>
-              <[p := proc_pmp_set proc (pmpreg, conf_opt) ]> ptbl
+              <[ p := proc_pmp_set proc (pmpreg, conf_opt) ]> ptbl
           end
       end
   end.
