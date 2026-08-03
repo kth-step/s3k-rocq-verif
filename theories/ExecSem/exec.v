@@ -107,6 +107,49 @@ Definition exec_mon_derive (kstate : kstate_t) (owner i csize : nat) : option (k
 
 (** ** Time slice operations *)
 
+Definition exec_tsl_transfer (kstate : kstate_t) (owner i target : nat) : kstate_t * int64 :=
+  match cap_owner_get kstate.(ktsl_tbl) owner i with
+  | None => (kstate, err_invalid_access)
+  | Some ci => 
+      let ci' := ci <| (@cowner tsl_t) := Some target |> in
+      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, Some ci') in
+      let ksched' :=
+        if decide (ci.(cdata).(tfree) <> O) then
+          sched_set kstate.(ksched) (ci.(cdata).(thart), ci.(cdata).(tbase), Some target, ci.(cdata).(tfree))
+        else
+          kstate.(ksched) in
+      let kstate' := kstate <| ktsl_tbl := ktsl_tbl' |> <| ksched := ksched' |> in
+      (kstate', err_success 0)
+  end.
+
+Definition exec_tsl_derive (kstate : kstate_t) (owner i csize tsize : nat) : option (kstate_t * int64) :=
+  match cap_owner_get kstate.(ktsl_tbl) owner i with
+  | None => Some (kstate, err_invalid_access)
+  | Some ci =>
+      if decide (csize = 0 \/ ci.(cfree) <= csize \/ tsize = 0 \/ ci.(cdata).(tfree) < tsize) then
+        Some (kstate, err_invalid_argument)
+      else
+      let j := i + ci.(cfree) - csize in
+      if cap_idx_valid kstate.(ktsl_tbl) j then
+        let di' := ci.(cdata) <| tfree := ci.(cdata).(tfree) - tsize |> in
+        let ci' := ci <| (@cfree tsl_t) := ci.(cfree) - csize |> <| (@cdata tsl_t) := di' |> in
+        let dj := {| thart := ci.(cdata).(thart);
+                     tbase := ci.(cdata).(tbase) + ci.(cdata).(tfree) - tsize;
+                     tfree := tsize;
+                     tsize := tsize |} in
+        let cj := {| cowner := Some owner;
+                     cfree := csize;
+                     csize := csize;
+                     cdata := dj; |} in
+        let ktsl_tbl' := cap_set (cap_set kstate.(ktsl_tbl) (i, Some ci')) (j, Some cj) in
+        let ksched' := sched_set (sched_set kstate.(ksched) (ci'.(cdata).(thart), ci'.(cdata).(tbase), ci'.(cowner), ci'.(cdata).(tfree)))
+                                  (cj.(cdata).(thart), cj.(cdata).(tbase), cj.(cowner), cj.(cdata).(tfree)) in
+        let kstate' := kstate <| ktsl_tbl := ktsl_tbl' |> <| ksched := ksched' |> in
+        Some (kstate', err_success j)
+      else
+        None
+  end.
+
 Definition exec_tsl_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option (kstate_t * int64) :=
   match cap_owner_get kstate.(ktsl_tbl) owner i with
   | None => Some (kstate, err_invalid_access)
@@ -123,8 +166,8 @@ Definition exec_tsl_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option 
         let ksched' :=
           if decide (cj.(cdata).(tfree) ≠ 0) then
             sched_set
-              (sched_set kstate.(ksched) cj.(cdata).(thart) cj.(cdata).(tbase) None 0)
-              ci'.(cdata).(thart) ci'.(cdata).(tbase) ci'.(cowner) ci'.(cdata).(tfree)
+              (sched_set kstate.(ksched) (cj.(cdata).(thart), cj.(cdata).(tbase), None, 0))
+              (ci'.(cdata).(thart), ci'.(cdata).(tbase), ci'.(cowner), ci'.(cdata).(tfree))
           else 
             kstate.(ksched)
         in
@@ -135,6 +178,20 @@ Definition exec_tsl_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option 
       Some (kstate, err_success 0)
   end.
 
+Definition exec_tsl_delete (kstate : kstate_t) (owner : nat) (i : nat) : (kstate_t * int64):=
+  match cap_owner_get kstate.(ktsl_tbl) owner i with
+  | None => (kstate, err_invalid_access)
+  | Some ci => 
+      let ci' := ci <| (@cowner tsl_t) := None |> in
+      let ktsl_tbl' := cap_set kstate.(ktsl_tbl) (i, Some ci') in
+      let ksched' :=
+        if decide (ci.(cdata).(tfree) ≠ 0) then
+          sched_set kstate.(ksched) (ci'.(cdata).(thart), ci'.(cdata).(tbase), ci'.(cowner), ci'.(cdata).(tfree))
+        else
+          kstate.(ksched) in
+      let kstate' := kstate <| ktsl_tbl := ktsl_tbl' |> <| ksched := ksched' |> in
+      (kstate', err_success 0)
+  end.
 
 (** ** Memory operations *)
 Definition exec_mem_pmp_set (kstate : kstate_t) (owner : nat) (i : nat)
