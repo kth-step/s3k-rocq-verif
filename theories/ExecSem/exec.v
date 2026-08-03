@@ -46,6 +46,16 @@ Definition exec_mon_introspect (kstate: kstate_t) (owner i j: nat) : option (int
       Some (err_invalid_access, Int64.zero)
   end.
 
+Definition exec_mon_transfer (kstate : kstate_t) (owner i target : nat) : (kstate_t * int64) :=
+  match cap_owner_get kstate.(kmon_tbl) owner i with
+  | None => (kstate, err_invalid_access)
+  | Some ci => 
+      let ci' := ci <| (@cowner mon_t) := Some target |> in
+      let kmon_tbl' := cap_set kstate.(kmon_tbl) (i, Some ci') in
+      let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
+      (kstate', err_success 0)
+  end.
+
 Definition exec_mon_revoke (kstate : kstate_t) (owner : nat) (i : nat) : option (kstate_t * int64) :=
   match cap_owner_get kstate.(kmon_tbl) owner i with
   | None => Some (kstate, err_invalid_access)
@@ -72,6 +82,27 @@ Definition exec_mon_delete (kstate : kstate_t) (owner : nat) (i : nat) : (kstate
       let kmon_tbl' := cap_set kstate.(kmon_tbl) (i, (Some ci')) in
       let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
       (kstate', err_success 0)
+  end.
+
+Definition exec_mon_derive (kstate : kstate_t) (owner i csize : nat) : option (kstate_t * int64) :=
+  match cap_owner_get kstate.(kmon_tbl) owner i with
+  | None => Some (kstate, err_invalid_access)
+  | Some ci =>
+      if decide (csize = 0 \/ ci.(cfree) <= csize) then
+        Some (kstate, err_invalid_argument)
+      else
+      let j := i + ci.(cfree) - csize in
+      if cap_idx_valid kstate.(kmon_tbl) j then
+        let ci' := ci <| (@cfree mon_t) := ci.(cfree) - csize |> in
+        let cj := {| cowner := Some owner;
+                     cfree := csize;
+                     csize := csize;
+                     cdata := ci.(cdata); |} in
+        let kmon_tbl' := cap_set (cap_set kstate.(kmon_tbl) (i, Some ci')) (j, Some cj) in
+        let kstate' := kstate <| kmon_tbl := kmon_tbl' |> in
+        Some (kstate', err_success j)
+      else
+        None
   end.
 
 (** ** Time slice operations *)
