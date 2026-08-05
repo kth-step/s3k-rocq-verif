@@ -63,7 +63,7 @@ Ltac2 norm_length1 () :=
   match! goal with
   | [h : ?tb.[?i <- ?v] = Some ?tb' |- context[length ?tb'] ] =>
     (* Barocq set doesn't change length. *)
-    let h := Control.hyp h in rewrite (bset_length $tb $i $v $h)
+    let h := Control.hyp h in rewrite (bset_length_same $tb $i $v $h)
   | [h : Rmon_table (CapTable ?ta) ?tb |- context[length ?tb]] =>
     (* Normalize concrete table size into abstract table size. *)
     let h := Control.hyp h in

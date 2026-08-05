@@ -16,6 +16,7 @@ Section Barray.
 
 Variable A : Type.
 
+(** Barocq list get lemmas. *)
 Lemma bget_lookup :
   forall (t : list A) i, t.[i] = t !! (usize_to_nat i).
 Proof.
@@ -35,19 +36,7 @@ Proof.
     + simpl; rewrite <- Nat2Z.inj_pred; [ done | by lia ].
 Qed.
 
-Lemma valid_index_true_length (t : list A) i :
-  valid_index t i = true -> (usize_to_nat i < length t)%nat.
-Proof.
-  intros.
-  unfold valid_index in H.
-  apply Z.ltb_lt in H.
-  change Barray.Zlength with Zlength in H.
-  rewrite <- ZtoNat_Zlength.
-  unfold usize_to_nat, USIZE.to_Z.
-  rep_lia.
-Qed.
-
-Lemma bget_Some :
+Lemma bget_Some_lt :
   forall (t : list A) i,
   t.[i] <> None <-> (usize_to_nat i < length t)%nat.
 Proof.
@@ -60,40 +49,54 @@ Proof.
   lia.
 Qed.
 
-(** TODO this one is tricky *)
+(** Barocq list set lemmas. *)
+
+Lemma valid_index_true_lt (t : list A) i :
+  valid_index t i = true <-> (usize_to_nat i < length t)%nat.
+Proof.
+  unfold valid_index, Barray.Zlength, usize_to_nat, USIZE.to_Z.
+  rewrite <- ZtoNat_Zlength.
+  rep_lia.
+Qed.
+
+(* Credit: Karl Palmskog. *)
 Lemma bset_Some_insert :
   forall (t t' : list A) i v,
   t.[i <- v] = Some t' ->
   t' = <[ usize_to_nat i := v ]> t.
 Proof.
-  (* setSPEC is insufficient for this proof since it only specifies
-     indices within the usize range are unchanged. *)
   intros.
   unfold set in H; case_match; try discriminate.
-  pose proof valid_index_true_length _ _ H0.
+  apply valid_index_true_lt in H0.
   inv H.
-  unfold usize_to_nat, USIZE.to_Z in *.
-  set (z := Intsize.unsigned i) in *.
-  assert (0 <= z) by rep_lia.
-  rewrite <- (Z2Nat.id z H).
-  rewrite Nat2Z.id.
-  set (n := Z.to_nat z) in *.
-  apply list_eq.
-  intros n'.
-  assert (n' < n \/ n' = n \/ n < n')%nat by lia.
-  destruct_or?.
-  - (* n' < n *)
-Admitted.
+  rewrite insert_take_drop; last done.
+  assert (Htake: sublist 0 (Intsize.unsigned i) t = take (usize_to_nat i) t). {
+    by rewrite sublist_firstn.
+  }
+  assert (Hdrop: sublist (Intsize.unsigned i + 1) (Barray.Zlength t) t =
+   drop (S (usize_to_nat i)) t). {
+    rewrite sublist_skip; last by rep_lia.
+    unfold usize_to_nat, USIZE.to_Z.
+    repeat f_equal; rep_lia.
+  }
+  by rewrite Htake, Hdrop.
+Qed.
 
 Lemma bget_Some_bset_Some :
   forall (t : list A) i v v',
   t.[i] = Some v ->
   exists t', t.[i <- v'] = Some t'.
 Proof.
-Admitted.
+  intros.
+  assert (Hnone: t.[i] <> None) by congruence.
+  apply bget_Some_lt in Hnone.
+  apply valid_index_true_lt in Hnone.
+  unfold set.
+  eexists.
+  by rewrite Hnone.
+Qed.
 
-
-Lemma bset_length :
+Lemma bset_length_same :
   forall (t : list A) i v t',
   t.[i <- v] = Some t' ->
   length t' = length t.
@@ -102,5 +105,6 @@ Proof.
   rewrite (bset_Some_insert _ _ _ H).
   apply length_insert.
 Qed.
+
 End Barray.
 

@@ -433,14 +433,12 @@ Lemma lookup_Some_bget_safe {A} {B} :
 Proof.
   intros.
   assert (tb.[ib] <> None). {
-    apply bget_Some.
+    apply bget_Some_lt.
     rewrite (int64_to_usize_to_nat_same H0).
     rewrite <- H1.
     by eapply lookup_lt_Some.
   }
-  destruct tb.[ib].
-  - eauto.
-  - congruence.
+  destruct tb.[ib]; [ eauto | congruence ].
 Qed.
 
 Section Length.
