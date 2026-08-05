@@ -305,5 +305,9 @@ Hint Extern 10 (err_success _ = _) => solve_arith : s3k_inv.
 
 Ltac forward_abstract := ltac2:(forward_abstract ()).
 
-Ltac solve_corres := ltac2:(solve_corres ()).
+Ltac prepare_corres :=
+ intros; autounfold with s3k_unfold.
 
+Ltac gen_corres := repeat forward_abstract.
+
+Ltac solve_corres := ltac2:(solve_corres ()).

@@ -5,9 +5,6 @@ From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util config.
 From S3K.Verif Require Import repr safe_refine tactics refine_tactics bridge.
 
-
-Ltac prepare := intros; autounfold with s3k_unfold.
-
 Section S3KRefine.
 
 Variable ka : kstate_t.
@@ -50,8 +47,8 @@ Theorem mon_delele_safe_refine :
   safe_refine Rkstate_with_err (exec_mon_delete ka ownera ia) (Mon_delete kb ownerb ib).
 Proof.
   unfold exec_mon_delete, Mon_delete.
-  prepare.
-  repeat forward_abstract; solve_corres.
+  prepare_corres.
+  gen_corres; solve_corres.
 Qed.
 
 Theorem mon_transfer_safe_refine :
@@ -63,8 +60,8 @@ Theorem mon_transfer_safe_refine :
   safe_refine Rkstate_with_err (exec_mon_transfer ka ownera ia new_ownera) (Mon_transfer kb ownerb ib new_ownerb).
 Proof.
   unfold exec_mon_transfer, Mon_transfer.
-  prepare.
-  repeat forward_abstract; solve_corres.
+  prepare_corres.
+  gen_corres; solve_corres.
 Qed.
 
 Theorem mon_derive_safe_refine :
@@ -76,8 +73,8 @@ Theorem mon_derive_safe_refine :
   safe_refine_opt Rkstate_with_err (exec_mon_derive ka ownera ia csizea) (Mon_derive kb ownerb ib ownerb csizeb).
 Proof.
   unfold exec_mon_derive, Mon_derive.
-  prepare.
-  repeat forward_abstract; solve_corres.
+  prepare_corres.
+  gen_corres; solve_corres.
 Qed.
 
 Theorem mon_revoke_safe_refine :
@@ -88,8 +85,8 @@ Theorem mon_revoke_safe_refine :
   safe_refine_opt Rkstate_with_err (exec_mon_revoke' ka ownera ia) (Mon_revoke kb ownerb ib).
 Proof.
   unfold exec_mon_revoke', Mon_revoke, Mon_revoke_once.
-  prepare.
-  repeat forward_abstract; solve_corres.
+  prepare_corres.
+  gen_corres; solve_corres.
 Qed.
 
 End S3KRefine.
