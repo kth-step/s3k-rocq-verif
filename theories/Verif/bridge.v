@@ -4,6 +4,11 @@ From compcert Require Import Integers.
 From S3K.ExecSem Require Import kstate cap exec.
 From S3K.Verif Require Import tactics.
 
+(** * Definitions bridging the gap between the concrete and abstract semantics. *)
+
+(** [exec_mon_revoke'] mimics the in-place update semantics at the concrete level,
+which works better with automated refinement. We prove it is equivalent to [exec_mon_revoke]
+under well-formedness. *)
 Definition exec_mon_revoke' (kstate : kstate_t) (owner : nat) (i : nat) : option (kstate_t * int64) :=
   match cap_owner_get kstate.(kmon_tbl) owner i with
   | None => Some (kstate, err_invalid_access)

@@ -5,9 +5,6 @@ From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util config.
 From S3K.Verif Require Import repr safe_refine tactics refine_tactics bridge.
 
-(** * Refinement proofs *)
-
-(** ** Refinement proofs for capability operations. *)
 
 Ltac prepare := intros; autounfold with s3k_unfold.
 
@@ -16,28 +13,34 @@ Section S3KRefine.
 Variable ka : kstate_t.
 Variable kb : Types_kstate.
 
-(** This should be evident from abstract kernel well-formedness, however
-since it's not ported yet use hypothesis for now. *)
+(** * Kernel well-formedness properties *)
+
+(** Capability size is a constant. *)
 Hypothesis mon_table_size : ctable_size ka.(kmon_tbl) = MON_SZ.
 
+(** Capability field [cfree] upper bound. *)
 Hypothesis cfree_range :
   forall l i v,
   l !! i = Some (Some v) ->
   ka.(kmon_tbl) = CapTable l ->
   (v.(cfree) <= MON_SZ)%nat.
 
+(** Capability field [csize] upper bound. *)
 Hypothesis csize_range :
   forall l i v,
   l !! i = Some (Some v) ->
   ka.(kmon_tbl) = CapTable l ->
   (v.(csize) <= MON_SZ)%nat.
 
+(** A capability's next child is within its own range. *)
 Hypothesis next_child_range :
   forall l i vi vj,
   l !! i = Some (Some vi) ->
   l !! (i + vi.(cfree))%nat = Some (Some vj) ->
   ka.(kmon_tbl) = CapTable l ->
   (vi.(cfree) + vj.(cfree) <= vi.(csize))%nat.
+
+(** * Refinement proofs for capability operations *)
 
 Theorem mon_delele_safe_refine :
   forall ownera ownerb ia ib,

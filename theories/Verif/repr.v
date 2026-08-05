@@ -146,72 +146,15 @@ Definition Rkstate := ofun_hrel kstate_up.
 
 Definition Rkstate_with_err := ofun_hrel kstate_to_kstate_err.
 
-Create HintDb s3k_repr_unfold.
-Hint Unfold mbind option_bind : s3k_repr_unfold.
-Hint Unfold fun_hrel ofun_hrel : s3k_repr_unfold.
-Hint Unfold kstate_up kstate_to_kstate_err : s3k_repr_unfold.
-Hint Unfold Rtsl_table Rmon_table Rsched Rptable Rctx Rkstate Rkstate_with_err : s3k_repr_unfold.
+Create HintDb kstate_unfold.
+Hint Unfold mbind option_bind : kstate_unfold.
+Hint Unfold fun_hrel ofun_hrel : kstate_unfold.
+Hint Unfold kstate_up kstate_to_kstate_err : kstate_unfold.
+Hint Unfold Rtsl_table Rmon_table Rsched Rptable Rctx Rkstate Rkstate_with_err : kstate_unfold.
 
-(** ** Helper lemmas *)
+(** * Helper lemmas *)
 
-(** Rkstate inversion. FIXME this is ignoring memory table for now. *)
-Lemma Rkstate_inv :
-  forall ka kb,
-  Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) ->
-  Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) ->
-  Rsched ka.(ksched) kb.(types_kstate_sched) ->
-  Rptable ka.(kptable) kb.(types_kstate_procs) ->
-  Rkstate ka kb.
-Proof.
-  autounfold with s3k_repr_unfold.
-  intros.
-  rewrite H, H0, H1, H2.
-Admitted.
-
-Lemma Rmon_table_inv_Rkstate :
-  forall ka kb, Rkstate ka kb ->
-  Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table).
-Proof.
-  autounfold with s3k_repr_unfold.
-  intros; repeat case_match; try discriminate; by inv H.
-Qed.
-
-Lemma Rtsl_table_inv_Rkstate :
-  forall ka kb, Rkstate ka kb ->
-  Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table).
-Proof.
-  autounfold with s3k_repr_unfold.
-  intros; repeat case_match; try discriminate; by inv H.
-Qed.
-
-Lemma Rptable_inv_Rkstate :
-  forall ka kb, Rkstate ka kb ->
-  Rptable ka.(kptable) kb.(types_kstate_procs).
-Proof.
-  autounfold with s3k_repr_unfold.
-  intros; repeat case_match; try discriminate; by inv H.
-Qed.
-
-Lemma Rsched_inv_Rkstate :
-  forall ka kb, Rkstate ka kb ->
-  Rsched ka.(ksched) kb.(types_kstate_sched).
-Proof.
-  autounfold with s3k_repr_unfold.
-  intros; repeat case_match; try discriminate; by inv H.
-Qed.
-
-Lemma Rkstate_with_err_inv :
-  forall ka kb erra,
-  (Rkstate ka kb /\ erra = kb.(types_kstate_errcode)) ->
-  Rkstate_with_err (ka, erra) kb.
-Proof.
-  unfold Rkstate_with_err, Rkstate, kstate_to_kstate_err, fun_hrel, ofun_hrel.
-  intros.
-  destruct H.
-  by rewrite H, H0.
-Qed.
-
-Local Transparent Archi.ptr64 Wordsize_Ptrofs.wordsize.
+(** ** Rnat related lemmas.*)
 
 (** This is architecture dependent (not true for 32bit arch). If 64bit integer [ib] corresponds
 to natural number [ia], then turning it to usize then to natural number would still be ia. *)
@@ -229,6 +172,88 @@ Proof.
   apply Int64.unsigned_range_2.
 Qed.
 
+(** Abstract lookup safety + indices connected by Rnat imply barocq get safety. *)
+Lemma lookup_Some_bget_safe {A} {B} :
+  forall (ta : list A) (tb : list B) ia ib va,
+  ta !! ia = Some va ->
+  Rnat ia ib ->
+  length ta = length tb ->
+  exists vb, tb.[ib] = Some vb.
+Proof.
+  intros.
+  assert (tb.[ib] <> None). {
+    apply bget_Some_lt.
+    rewrite (int64_to_usize_to_nat_same H0).
+    rewrite <- H1.
+    by eapply lookup_lt_Some.
+  }
+  destruct tb.[ib]; [ eauto | congruence ].
+Qed.
+
+(** ** Rksate related. *)
+
+(** Rkstate inversion. *)
+(* FIXME this is ignoring memory table for now. *)
+Lemma Rkstate_inv :
+  forall ka kb,
+  Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) ->
+  Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) ->
+  Rsched ka.(ksched) kb.(types_kstate_sched) ->
+  Rptable ka.(kptable) kb.(types_kstate_procs) ->
+  Rkstate ka kb.
+Proof.
+  autounfold with kstate_unfold.
+  intros.
+  rewrite H, H0, H1, H2.
+Admitted.
+
+Lemma Rmon_table_inv_Rkstate :
+  forall ka kb, Rkstate ka kb ->
+  Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table).
+Proof.
+  autounfold with kstate_unfold.
+  intros; repeat case_match; try discriminate; by inv H.
+Qed.
+
+Lemma Rtsl_table_inv_Rkstate :
+  forall ka kb, Rkstate ka kb ->
+  Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table).
+Proof.
+  autounfold with kstate_unfold.
+  intros; repeat case_match; try discriminate; by inv H.
+Qed.
+
+Lemma Rptable_inv_Rkstate :
+  forall ka kb, Rkstate ka kb ->
+  Rptable ka.(kptable) kb.(types_kstate_procs).
+Proof.
+  autounfold with kstate_unfold.
+  intros; repeat case_match; try discriminate; by inv H.
+Qed.
+
+Lemma Rsched_inv_Rkstate :
+  forall ka kb, Rkstate ka kb ->
+  Rsched ka.(ksched) kb.(types_kstate_sched).
+Proof.
+  autounfold with kstate_unfold.
+  intros; repeat case_match; try discriminate; by inv H.
+Qed.
+
+Lemma Rkstate_with_err_inv :
+  forall ka kb erra,
+  (Rkstate ka kb /\ erra = kb.(types_kstate_errcode)) ->
+  Rkstate_with_err (ka, erra) kb.
+Proof.
+  unfold Rkstate_with_err, Rkstate, kstate_to_kstate_err, fun_hrel, ofun_hrel.
+  intros.
+  destruct H.
+  by rewrite H, H0.
+Qed.
+
+Local Transparent Archi.ptr64 Wordsize_Ptrofs.wordsize.
+
+(** ** Monitor table related. *)
+
 (** Table set preserves correspondence. *)
 Lemma Rmon_table_set :
   forall ta tb ia (ib : int64) va vb tb',
@@ -238,7 +263,7 @@ Lemma Rmon_table_set :
   Rnat ia ib ->
   Rmon_table (cap_set ta (ia, va)) tb'.
 Proof.
-  autounfold with s3k_repr_unfold.
+  autounfold with kstate_unfold.
   intros.
   unfold mon_table_up, mbind in *.
   (* Avoid unfolding the implicit argument to mapM. *)
@@ -254,102 +279,6 @@ Proof.
   inv H0.
   apply mapM_Some_2 in H4.
   by rewrite H4.
-Qed.
-
-(** Setting capability fileds preserves correspondence. *)
-(*Lemma Rmon_set_owner :
-  forall mona monb ownera ownerb,
-  Rmon (Some mona) monb ->
-  Rpid_opt ownera ownerb ->
-  let monb' := monb <| types_mon_t_owner := ownerb |> in
-  let mona' := mona <| (@cowner mon_t) := ownera |> in
-  Rmon (Some mona') monb'.
-Proof.
-  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
-  intros.
-  case_match; try discriminate. 
-  unfold Rpid_opt, fun_hrel in H0.
-  repeat case_match; try discriminate; simpl in *. 
-  - lia.
-  - lia.
-  - inv H. f_equal. f_equal. simpl. congruence.
-  - congruence.
-Qed.
-
-Lemma Rmon_set_cfree :
-  forall mona monb cfreea cfreeb,
-  Rmon (Some mona) monb ->
-  Rnat cfreea cfreeb ->
-  cfreea <> O ->
-  let monb' := monb <| types_mon_t_cfree := cfreeb |> in
-  let mona' := mona <| (@cfree mon_t) := cfreea |> in
-  Rmon (Some mona') monb'.
-Proof.
-  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
-  intros.
-  case_match; try discriminate. 
-  unfold Rnat, fun_hrel in H0.
-  repeat case_match; try discriminate; simpl in *. 
-  - congruence.
-  - inv H.
-  - inv H. repeat f_equal. simpl. congruence.
-  - inv H.
-   Qed.*)
-
-(** Barocq monitor capability corresponds to None if owner and cfree are 0
-and has valid pid. *)
-Lemma Rmon_None_inv :
-  forall csize pa pb,
-  Rpid_opt (Some pa) pb ->
-  Rmon None {|
-    types_mon_t_owner := 0 L;
-    types_mon_t_cfree := 0 L;
-    types_mon_t_csize := csize;
-    types_mon_t_pid := pb;
-  |}.
-Proof.
-  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
-  intros.
-  repeat case_match; try discriminate. 
-  - reflexivity.
-  - simpl in H0; unfold Rpid_opt, fun_hrel in H; congruence.
-Qed.
-
-
-(** Capabilities correspond if fields correspond. *)
-Lemma Rmon_Some_inv :
-  forall mona monb,
-  Rpid_opt mona.(cowner) monb.(types_mon_t_owner) ->
-  Rnat mona.(cfree) monb.(types_mon_t_cfree) ->
-  mona.(cfree) <> O ->
-  Rnat mona.(csize) monb.(types_mon_t_csize) ->
-  Rpid_opt (Some mona.(cdata).(mpid)) monb.(types_mon_t_pid) ->
-  Rmon (Some mona) monb.
-Proof.
-  destruct mona, cdata.
-  simpl.
-  unfold Rmon, Rpid_opt, Rnat, fun_hrel, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
-  intros.
-  repeat case_match; try discriminate; try congruence.
-Qed.
-
-(** Lemmas used for forward reasoning *)
-
-(** Correspondence results from Rmon *)
-Lemma Rmon_Some_corres :
-  forall va vb,
-  Rmon (Some va) vb ->
-  Rpid_opt va.(cowner) vb.(types_mon_t_owner) /\
-    Rnat va.(cfree) vb.(types_mon_t_cfree) /\
-    Rnat va.(csize) vb.(types_mon_t_csize) /\
-    Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid) /\
-    va.(cfree) <> O.
-Proof.
-  intros.
-  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt in H.
-  repeat case_match; try discriminate.
-  inv H.
-  by repeat split.
 Qed.
 
 (** Getting at a valid index preserves correspondence. *)
@@ -378,38 +307,6 @@ Proof.
   - by pose proof Forall2_lookup_lr _ _ _ _ _ _ H2 H3 H1.
 Qed.
 
-(** When a concrete capability corresponds to None, it's owner field is invalid. *)
-Lemma Rmon_None_corres :
-  forall ownera ownerb cb,
-  Rpid_opt (Some ownera) ownerb ->
-  Rmon None cb ->
-  Int64.eq cb.(types_mon_t_owner) ownerb = false.
-Proof.
-  unfold Rpid_opt, Rmon, mon_up, int64_to_pid, fun_hrel, ofun_hrel, mbind, option_bind, mk_cap_opt.
-  intros.
-  repeat case_match; try discriminate.
-  inv H.
-  norm_cmp in *.
-  congruence.
-Qed.
-
-(** Rpid_opt is a one-to-one function. *)
-Lemma Rpid_opt_inj ownera ownerb ownera' ownerb':
-  Rpid_opt ownera ownerb ->
-  Rpid_opt ownera' ownerb' ->
-  (ownera = ownera' <-> Int64.unsigned ownerb = Int64.unsigned ownerb').
-Proof.
-  unfold Rpid_opt, fun_hrel, mon_up, int64_to_pid.
-  intros.
-  repeat case_match; try discriminate.
-  all: norm_cmp in *; subst; try (split; congruence).
-  unfold int64_to_nat.
-  repr_elim.
-  split; intros.
-  - inv H. rep_lia.
-  - f_equal. rep_lia.
-Qed.
-
 (** When two tables correspond, they have the same length. *)
 Lemma Rmon_table_len_same :
   forall ta tb,
@@ -423,23 +320,6 @@ Proof.
   symmetry; by eapply length_mapM.
 Qed.
 
-(** Abstract lookup safety implies barocq get safety. *)
-Lemma lookup_Some_bget_safe {A} {B} :
-  forall (ta : list A) (tb : list B) ia ib va,
-  ta !! ia = Some va ->
-  Rnat ia ib ->
-  length ta = length tb ->
-  exists vb, tb.[ib] = Some vb.
-Proof.
-  intros.
-  assert (tb.[ib] <> None). {
-    apply bget_Some_lt.
-    rewrite (int64_to_usize_to_nat_same H0).
-    rewrite <- H1.
-    by eapply lookup_lt_Some.
-  }
-  destruct tb.[ib]; [ eauto | congruence ].
-Qed.
 
 Section Length.
 
@@ -479,4 +359,94 @@ Proof.
 Qed.
 
 End Length.
+
+(** ** Monitor capability related. *)
+
+(** Barocq monitor capability corresponds to None if owner and cfree are 0
+and has valid pid. *)
+Lemma Rmon_None_inv :
+  forall csize pa pb,
+  Rpid_opt (Some pa) pb ->
+  Rmon None {|
+    types_mon_t_owner := 0 L;
+    types_mon_t_cfree := 0 L;
+    types_mon_t_csize := csize;
+    types_mon_t_pid := pb;
+  |}.
+Proof.
+  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
+  intros.
+  repeat case_match; try discriminate. 
+  - reflexivity.
+  - simpl in H0; unfold Rpid_opt, fun_hrel in H; congruence.
+Qed.
+
+
+(** Capabilities correspond if fields correspond. *)
+Lemma Rmon_Some_inv :
+  forall mona monb,
+  Rpid_opt mona.(cowner) monb.(types_mon_t_owner) ->
+  Rnat mona.(cfree) monb.(types_mon_t_cfree) ->
+  mona.(cfree) <> O ->
+  Rnat mona.(csize) monb.(types_mon_t_csize) ->
+  Rpid_opt (Some mona.(cdata).(mpid)) monb.(types_mon_t_pid) ->
+  Rmon (Some mona) monb.
+Proof.
+  destruct mona, cdata.
+  simpl.
+  unfold Rmon, Rpid_opt, Rnat, fun_hrel, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
+  intros.
+  repeat case_match; try discriminate; try congruence.
+Qed.
+
+(** When a concrete capability corresponds to some abstract capability, their fields correspond. *)
+Lemma Rmon_Some_corres :
+  forall va vb,
+  Rmon (Some va) vb ->
+  Rpid_opt va.(cowner) vb.(types_mon_t_owner) /\
+    Rnat va.(cfree) vb.(types_mon_t_cfree) /\
+    Rnat va.(csize) vb.(types_mon_t_csize) /\
+    Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid) /\
+    va.(cfree) <> O.
+Proof.
+  intros.
+  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt in H.
+  repeat case_match; try discriminate.
+  inv H.
+  by repeat split.
+Qed.
+
+(** When a concrete capability corresponds to None, it's owner field is invalid. *)
+Lemma Rmon_None_corres :
+  forall ownera ownerb cb,
+  Rpid_opt (Some ownera) ownerb ->
+  Rmon None cb ->
+  Int64.eq cb.(types_mon_t_owner) ownerb = false.
+Proof.
+  unfold Rpid_opt, Rmon, mon_up, int64_to_pid, fun_hrel, ofun_hrel, mbind, option_bind, mk_cap_opt.
+  intros.
+  repeat case_match; try discriminate.
+  inv H.
+  norm_cmp in *.
+  congruence.
+Qed.
+
+(** ** Rpid_opt related *)
+
+(** Rpid_opt is a one-to-one function. *)
+Lemma Rpid_opt_inj ownera ownerb ownera' ownerb':
+  Rpid_opt ownera ownerb ->
+  Rpid_opt ownera' ownerb' ->
+  (ownera = ownera' <-> Int64.unsigned ownerb = Int64.unsigned ownerb').
+Proof.
+  unfold Rpid_opt, fun_hrel, mon_up, int64_to_pid.
+  intros.
+  repeat case_match; try discriminate.
+  all: norm_cmp in *; subst; try (split; congruence).
+  unfold int64_to_nat.
+  repr_elim.
+  split; intros.
+  - inv H. rep_lia.
+  - f_equal. rep_lia.
+Qed.
 

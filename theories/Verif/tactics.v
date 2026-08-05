@@ -4,22 +4,22 @@ From Ltac2 Require Ltac2.
 
 (** * General tactics *)
 
-(** General tactics *)
 Tactic Notation "case_match" "in" ident(H) :=
   match type of H with
   | context [ match ?x with _ => _ end ] => destruct x eqn:?
   end.
 
-Ltac unfold_list xs :=
-  lazymatch xs with
-  | nil => idtac
-  | ?x :: ?xs' =>
-      unfold x;
-      unfold_list xs'
-  end.
+(** Rewrite boolean algebra into propositions. *)
+Ltac norm_bool :=
+  repeat rewrite
+    ?negb_true_iff, ?negb_false_iff,
+    ?orb_true_iff, ?orb_false_iff,
+    ?andb_true_iff, ?andb_false_iff.
 
-(** Normalize Int64 comparisons into Z comparisons *)
-Lemma ltu_true :
+(** * CompCert Integer arithmetic related tactics *)
+
+(** Normalize Int64 comparisons into integer comparisons *)
+Local Lemma ltu_true :
   forall x y, Int64.ltu x y = true <-> (Int64.unsigned x) < (Int64.unsigned y).
 Proof.
   split; intros.
@@ -27,7 +27,7 @@ Proof.
   - unfold Int64.ltu. destruct zlt; [ reflexivity | contradiction ].
 Qed.
 
-Lemma ltu_false :
+Local Lemma ltu_false :
   forall x y, Int64.ltu x y = false  <-> (Int64.unsigned x) >= (Int64.unsigned y).
 Proof.
   split; intros.
@@ -35,7 +35,7 @@ Proof.
   - unfold Int64.ltu. destruct zlt; [ contradiction | reflexivity ].
 Qed.
 
-Lemma eq_true :
+Local Lemma eq_true :
   forall x y, Int64.eq x y = true <-> (Int64.unsigned x) = (Int64.unsigned y).
 Proof.
   split; intros.
@@ -43,19 +43,13 @@ Proof.
   - unfold Int64.eq. destruct zeq; [ reflexivity | contradiction ].
 Qed.
 
-Lemma eq_false :
+Local Lemma eq_false :
   forall x y, Int64.eq x y = false <-> (Int64.unsigned x) <> (Int64.unsigned y).
 Proof.
   split; intros.
   - unfold Int64.eq in H. destruct zeq in H; [ discriminate | assumption ].
   - unfold Int64.eq. destruct zeq; [ contradiction | reflexivity ].
 Qed.
-
-Ltac norm_bool :=
-  repeat rewrite
-    ?negb_true_iff, ?negb_false_iff,
-    ?orb_true_iff, ?orb_false_iff,
-    ?andb_true_iff, ?andb_false_iff.
 
 Ltac norm_cmp :=
   unfold Int64.cmpu, Int64.cmp;
@@ -70,7 +64,7 @@ Tactic Notation "norm_cmp" "in" "*" :=
 
 Ltac norm_bool_cmp := norm_bool; norm_cmp.
 
-(** rep_lia from VST *)
+(** * rep_lia from VST *)
 
 Ltac Zground X :=
   match X with
@@ -160,7 +154,7 @@ Ltac rep_lia :=
    rep_lia_setup2;
    lia.
 
-(** Ltac2 utilities *)
+(** * Ltac2 utilities *)
 Module ltac2_tactics.
 
 Import Ltac2.
