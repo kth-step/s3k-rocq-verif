@@ -1,0 +1,10 @@
+module Sched
+
+import Types
+
+defn set(sched: sched_t, hart: hart_t, begin: time_slot_t, pid: pid_t, length: time_slot_t) : sched_t =
+  let hsched = sched[hart] in
+  let frame = { hsched[begin] with pid <- pid, length <- length, } in
+  let hsched = hsched[begin] <- frame in
+  sched[hart] <- hsched
+

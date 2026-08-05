@@ -63,16 +63,16 @@ defn revoke_once(ks: kstate, i: index_t) : kstate =
   let mon_table = ks.mon_table in
   if mon_table[i].cfree < mon_table[i].csize then 
     let j = i + mon_table[i].cfree in 
-    let cap_j = mon_table[j] in
-    let j_cfree = cap_j.cfree in
-    let cap_j = { cap_j with
-      owner <- 0ul,
-      cfree <- 0ul, } in
-    let mon_table = mon_table[j] <- cap_j in
+    let j_cfree = mon_table[j].cfree in
+    (* update i *)
     let cap_i = mon_table[i] in
     let cap_i = cap_i.cfree <- cap_i.cfree + j_cfree in
     let errcode = cap_i.csize - cap_i.cfree in
     let mon_table = mon_table[i] <- cap_i in
+    (* update j *)
+    let mon_table = mon_table[j] <- { mon_table[j] with
+      owner <- 0ul,
+      cfree <- 0ul, } in
     { ks with
       mon_table <- mon_table,
       errcode <- errcode as i64, }

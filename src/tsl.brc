@@ -1,0 +1,125 @@
+module Tsl
+
+import Types
+
+defn valid_access(ks: kstate, owner: pid_t, i: index_t) : bool =
+  if i < Config::tsl_table_size then
+    ks.tsl_table[i].owner == owner
+  else
+    false
+
+@static
+defn not_derivable(parent: tsl_t, csize: fuel_t, size: time_slot_t) : bool =
+  parent.cfree <= csize || size > parent.free || csize == 0ul || size == 0ul
+
+defn delete(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap = tsl_table[i].owner <- 0ul in
+    let tsl_table = tsl_table[i] <- cap in
+    let sched =
+      if cap.free > 0ul
+      then Sched::set(ks.sched, cap.hart, cap.base, 0ul, cap.free)
+      else ks.sched
+    in
+    { ks with
+      tsl_table <- tsl_table,
+      sched <- sched,
+      errcode <- Error::success, }
+  else
+    ks.errcode <- Error::invalid_access
+
+defn derive(ks: kstate, owner: pid_t, i: index_t, target: pid_t, csize: fuel_t, size: time_slot_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap_i = tsl_table[i] in
+    if not_derivable(cap_i, csize, size) then
+      ks.errcode <- Error::invalid_argument
+    else
+      let i_base = cap_i.base in
+      let i_free = cap_i.free - size in
+      let i_owner = cap_i.owner in
+      let hart = cap_i.hart in
+      let cap_i = { cap_i with
+        cfree <- cap_i.cfree - csize,
+        free <- i_free,
+      } in
+      let tsl_table = tsl_table[i] <- cap_i in
+      let j = i + cap_i.cfree in
+      let j_base = i_base + i_free in
+      let cap_j = { tsl_table[j] with
+        owner <- target,
+        cfree <- csize,
+        csize <- csize,
+        hart <- hart,
+        base <- j_base,
+        size <- size,
+        free <- size,
+      } in
+      let tsl_table = tsl_table[j] <- cap_j in
+      (* TODO semantic change, no longer moving current slot forward. *)
+      let sched = Sched::set(Sched::set(ks.sched, hart, i_base, i_owner, i_free),
+                             hart, j_base, target, size) in
+      { ks with
+        tsl_table <- tsl_table,
+        sched <- sched,
+        errcode <- j as i64, }
+  else
+    ks.errcode <- Error::invalid_access
+
+defn transfer(ks: kstate, owner: pid_t, i: index_t, target: pid_t) : kstate =
+  if valid_access(ks, owner, i) then
+    let tsl_table = ks.tsl_table in
+    let cap = tsl_table[i].owner <- target in
+    let sched =
+      if cap.free > 0ul
+      then Sched::set(ks.sched, cap.hart, cap.base, target, cap.free)
+      else ks.sched
+    in
+    let tsl_table = tsl_table[i] <- cap in
+    { ks with
+      tsl_table <- tsl_table,
+      sched <- sched,
+      errcode <- Error::success, }
+  else
+    ks.errcode <- Error::invalid_access
+
+defn revoke_once(ks: kstate, i: index_t) : kstate =
+  let tsl_table = ks.tsl_table in
+  if tsl_table[i].cfree < tsl_table[i].csize then 
+    let j = i + tsl_table[i].cfree in 
+    let j_cfree = tsl_table[j].cfree in
+    let j_free = tsl_table[j].free in
+    let j_hart = tsl_table[j].hart in
+    let j_base = tsl_table[j].base in
+    let cap_i = tsl_table[i] in
+    let i_hart = cap_i.hart in
+    let i_base = cap_i.base in
+    let i_owner = cap_i.owner in
+    let i_free = cap_i.free + j_free in
+    let cap_i = { cap_i with
+      cfree <- cap_i.cfree + j_cfree,
+      free <- i_free, } in
+    let errcode = cap_i.csize - cap_i.cfree in
+    let tsl_table = tsl_table[i] <- cap_i in
+    let tsl_table = tsl_table[j] <- { tsl_table[j] with
+      owner <- 0ul,
+      cfree <- 0ul, } in
+    let sched =
+      if j_free > 0ul
+      then Sched::set(Sched::set(ks.sched, j_hart, j_base, 0ul, 0ul),
+                      i_hart, i_base, i_owner, i_free)
+      else ks.sched
+    in
+    { ks with
+      tsl_table <- tsl_table,
+      errcode <- errcode as i64,
+      sched <- sched, }
+  else
+    ks.errcode <- Error::success
+
+defn revoke(ks: kstate, owner: pid_t, i: index_t) : kstate =
+  if valid_access(ks, owner, i) then
+    revoke_once(ks, i)
+  else
+    ks.errcode <- Error::invalid_access
