@@ -5,4 +5,6 @@ repr.v
 invariants.v
 barocq_aux.v
 tactics.v
+safe_refine.v
+refine_tactics.v
 refine.v

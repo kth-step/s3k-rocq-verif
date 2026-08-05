@@ -2,66 +2,20 @@ From stdpp Require Import prelude.
 From compcert Require Import Coqlib Integers.
 From Ltac2 Require Ltac2.
 
-(** * Tactics *)
-
-(** Ltac2 utilities *)
-Module Ltac2.
-
-Import Ltac2.
-
-Ltac2 fail_with_msg (s : string) := Control.backtrack_tactic_failure s.
-
-Ltac2 Notation "destruct_and" "?" h(opt(ident)) := 
-  match h with
-  | Some h => ltac1:(h |- destruct_and? h) (Ltac1.of_ident h)
-  | None => ltac1:(destruct_and?)
-  end.
-
-Ltac2 Notation "destruct_or" "?" h(opt(ident)) :=
-  match h with
-  | Some h => ltac1:(h |- destruct_or? h) (Ltac1.of_ident h)
-  | None => ltac1:(destruct_or?)
-  end.
-
-Ltac2 Notation "trivial_erewrite"
-  rw(list1(rewriting, ","))
-  cl(opt(clause))
-  tac(opt(seq("by", thunk(tactic)))) :=
-  unshelve (rewrite0 true rw cl tac); auto; Control.assert_true (Int.equal (Control.numgoals ()) 1).
-
-Ltac2 has_hyp_of_type (ty : constr) : bool :=
-  List.exist
-    (fun (_, _, hyp_ty) => Constr.equal hyp_ty ty)
-    (Control.hyps ()).
-
-Ltac2 Notation "assert_if_new" t(open_constr) :=
-  if has_hyp_of_type t then fail
-  else assert $t by eauto.
-
-Ltac2 pose_proof (id : ident option) (t : constr) :=
-  match id with
-  | Some id => pose ($id := $t); Std.clearbody [id]
-  | None =>
-    let h := Fresh.in_goal @H in
-    pose ($h := $t); Std.clearbody [h]
-  end.
-
-Ltac2 Notation "pose" "proof" t(open_constr) id(opt(seq("as", ident))):= pose_proof id t.
-
-Ltac2 extend (t : constr) :=
-  if has_hyp_of_type (Constr.type t) then 
-    fail
-  else
-    pose_proof None t.
-
-Ltac2 Notation "extend" t(open_constr) := extend t.
-
-End Ltac2.
+(** * General tactics *)
 
 (** General tactics *)
 Tactic Notation "case_match" "in" ident(H) :=
   match type of H with
   | context [ match ?x with _ => _ end ] => destruct x eqn:?
+  end.
+
+Ltac unfold_list xs :=
+  lazymatch xs with
+  | nil => idtac
+  | ?x :: ?xs' =>
+      unfold x;
+      unfold_list xs'
   end.
 
 (** Normalize Int64 comparisons into Z comparisons *)
@@ -206,14 +160,79 @@ Ltac rep_lia :=
    rep_lia_setup2;
    lia.
 
-(** Rewrite Int64.unsigned (Int64.repr z) into z *)
+(** Ltac2 utilities *)
+Module ltac2_tactics.
 
-Ltac repr_elim :=
-  rewrite ?Int64.unsigned_repr by rep_lia.
+Import Ltac2.
 
-Tactic Notation "repr_elim" "in" hyp(H) :=
-  rewrite ?Int64.unsigned_repr in H by rep_lia.
+Ltac2 fail_with_msg (s : string) := Control.backtrack_tactic_failure s.
 
-Tactic Notation "repr_elim" "in" "*" :=
-  repeat_on_hyps (fun H => repr_elim in H); repr_elim.
+Ltac2 Notation "lia" := ltac1:(lia).
+Ltac2 Notation "rep_lia" := ltac1:(rep_lia).
+
+Ltac2 Notation "destruct_decide" dec(constr) :=
+  ltac1:(dec |- destruct_decide dec) (Ltac1.of_constr dec).
+
+Ltac2 Notation "destruct_and" "?" h(opt(ident)) := 
+  match h with
+  | Some h => ltac1:(h |- destruct_and? h) (Ltac1.of_ident h)
+  | None => ltac1:(destruct_and?)
+  end.
+
+Ltac2 Notation "destruct_or" "?" h(opt(ident)) :=
+  match h with
+  | Some h => ltac1:(h |- destruct_or? h) (Ltac1.of_ident h)
+  | None => ltac1:(destruct_or?)
+  end.
+
+Ltac2 Notation "trivial_erewrite"
+  rw(list1(rewriting, ","))
+  cl(opt(clause))
+  tac(opt(seq("by", thunk(tactic)))) :=
+  unshelve (rewrite0 true rw cl tac); auto; Control.assert_true (Int.equal (Control.numgoals ()) 1).
+
+Ltac2 has_hyp_of_type (ty : constr) : bool :=
+  List.exist
+    (fun (_, _, hyp_ty) => Constr.equal hyp_ty ty)
+    (Control.hyps ()).
+
+Ltac2 Notation "assert_if_new" t(open_constr) :=
+  if has_hyp_of_type t then fail
+  else assert $t by eauto.
+
+Ltac2 pose_proof (id : ident option) (t : constr) :=
+  match id with
+  | Some id => pose ($id := $t); Std.clearbody [id]
+  | None =>
+    let h := Fresh.in_goal @H in
+    pose ($h := $t); Std.clearbody [h]
+  end.
+
+Ltac2 Notation "pose" "proof" t(open_constr) id(opt(seq("as", ident))):= pose_proof id t.
+
+Ltac2 extend (t : constr) :=
+  if has_hyp_of_type (Constr.type t) then 
+    fail
+  else
+    pose_proof None t.
+
+Ltac2 Notation "extend" t(open_constr) := extend t.
+
+(** Simplify Z <-> Int64 transformation. *)
+Ltac2 repr_elim1 () :=
+  match! goal with
+  | [ |- context[Int64.unsigned (Int64.repr ?z)]] =>
+    rewrite Int64.unsigned_repr with (z:=$z) by rep_lia
+  | [ h : context[Int64.unsigned (Int64.repr ?z)] |- _ ] =>
+    rewrite Int64.unsigned_repr with (z:=$z) in $h by rep_lia
+  | [ |- Int64.repr _ = Int64.repr _] => f_equal
+  end.
+
+Ltac2 Notation "repr_elim" := repeat (repr_elim1 ()).
+
+End ltac2_tactics.
+
+Import ltac2_tactics.
+
+Ltac repr_elim := ltac2:(repr_elim).
 

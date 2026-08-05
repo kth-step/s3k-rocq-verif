@@ -4,7 +4,7 @@ From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util proc sched config.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
-From S3K.Verif Require Import barocq_aux tactics.
+From S3K.Verif Require Import barocq_aux tactics invariants.
 From RecordUpdate Require Import RecordUpdate.
 
 Import IntopNotations.
@@ -72,9 +72,9 @@ Definition mon_table_up (l : list Types_mon_t) : option mon_table_t :=
   mon_table ← mapM mon_up l; mret (CapTable mon_table).
 
 (* TODO complete refinement mappings *)
-Parameter mem_up : Types_mem_t -> mem_t.
+(*Parameter mem_up : Types_mem_t -> mem_t.
 
-Definition mem_table_up := map mem_up.
+Definition mem_table_up := map mem_up.*)
 Parameter some_mem_table : mem_table_t.
 
 
@@ -92,7 +92,14 @@ Definition proc_up (p : Types_proc_t) : proc_t :=
 Definition ptable_up := map proc_up.
 
 (** Scheduler mappings. *)
-Parameter some_sched : sched_t.
+Definition frame_up (f: Types_frame_t) : (option nat * nat) :=
+  (int64_to_pid f.(types_frame_t_pid), int64_to_nat f.(types_frame_t_length)).
+
+Definition hsched_up (l : list Types_frame_t) : hsched_t :=
+  HSched (map frame_up l).
+
+Definition sched_up (l : list (list Types_frame_t)) : sched_t :=
+  map hsched_up l.
 
 Definition kstate_up (k : Types_kstate) : option kstate_t :=
   mon_table ← mon_table_up k.(types_kstate_mon_table);
@@ -102,7 +109,7 @@ Definition kstate_up (k : Types_kstate) : option kstate_t :=
     ktsl_tbl := tsl_table;
     kmon_tbl := mon_table;
     kmem_tbl := some_mem_table;
-    ksched := some_sched;
+    ksched := sched_up k.(types_kstate_sched);
   |}.
 
 Definition kstate_to_kstate_err (k : Types_kstate) : option (kstate_t * int64) :=
@@ -119,9 +126,15 @@ Definition Rtsl := ofun_hrel tsl_up.
 
 Definition Rmon := ofun_hrel mon_up.
 
+Definition Rframe := fun_hrel frame_up.
+
 Definition Rtsl_table := ofun_hrel tsl_table_up.
 
 Definition Rmon_table := ofun_hrel mon_table_up.
+
+Definition Rhsched := fun_hrel hsched_up.
+
+Definition Rsched := fun_hrel sched_up.
 
 Definition Rptable := fun_hrel ptable_up.
 
@@ -137,22 +150,22 @@ Create HintDb s3k_repr_unfold.
 Hint Unfold mbind option_bind : s3k_repr_unfold.
 Hint Unfold fun_hrel ofun_hrel : s3k_repr_unfold.
 Hint Unfold kstate_up kstate_to_kstate_err : s3k_repr_unfold.
-Hint Unfold Rtsl_table Rmon_table Rptable Rctx Rkstate Rkstate_with_err : s3k_repr_unfold.
+Hint Unfold Rtsl_table Rmon_table Rsched Rptable Rctx Rkstate Rkstate_with_err : s3k_repr_unfold.
 
 (** ** Helper lemmas *)
 
-(** Lemmas used for backward reasoning. *)
-(* FIXME this is ignoring memory table and scheduler for now. *)
+(** Rkstate inversion. FIXME this is ignoring memory table for now. *)
 Lemma Rkstate_inv :
   forall ka kb,
   Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) ->
   Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) ->
+  Rsched ka.(ksched) kb.(types_kstate_sched) ->
   Rptable ka.(kptable) kb.(types_kstate_procs) ->
   Rkstate ka kb.
 Proof.
   autounfold with s3k_repr_unfold.
   intros.
-  rewrite H0, H, H1.
+  rewrite H, H0, H1, H2.
 Admitted.
 
 Lemma Rmon_table_inv_Rkstate :
@@ -179,6 +192,14 @@ Proof.
   intros; repeat case_match; try discriminate; by inv H.
 Qed.
 
+Lemma Rsched_inv_Rkstate :
+  forall ka kb, Rkstate ka kb ->
+  Rsched ka.(ksched) kb.(types_kstate_sched).
+Proof.
+  autounfold with s3k_repr_unfold.
+  intros; repeat case_match; try discriminate; by inv H.
+Qed.
+
 Lemma Rkstate_with_err_inv :
   forall ka kb erra,
   (Rkstate ka kb /\ erra = kb.(types_kstate_errcode)) ->
@@ -190,9 +211,10 @@ Proof.
   by rewrite H, H0.
 Qed.
 
-
 Local Transparent Archi.ptr64 Wordsize_Ptrofs.wordsize.
 
+(** This is architecture dependent (not true for 32bit arch). If 64bit integer [ib] corresponds
+to natural number [ia], then turning it to usize then to natural number would still be ia. *)
 Lemma int64_to_usize_to_nat_same ia ib:
   Rnat ia ib ->
   usize_to_nat (USIZE.of_u64 ib) = ia.
@@ -207,6 +229,7 @@ Proof.
   apply Int64.unsigned_range_2.
 Qed.
 
+(** Table set preserves correspondence. *)
 Lemma Rmon_table_set :
   forall ta tb ia (ib : int64) va vb tb',
   tb.[ib <- vb] = Some tb' ->
@@ -233,7 +256,8 @@ Proof.
   by rewrite H4.
 Qed.
 
-Lemma Rmon_set_owner :
+(** Setting capability fileds preserves correspondence. *)
+(*Lemma Rmon_set_owner :
   forall mona monb ownera ownerb,
   Rmon (Some mona) monb ->
   Rpid_opt ownera ownerb ->
@@ -270,8 +294,10 @@ Proof.
   - inv H.
   - inv H. repeat f_equal. simpl. congruence.
   - inv H.
-Qed.
+   Qed.*)
 
+(** Barocq monitor capability corresponds to None if owner and cfree are 0
+and has valid pid. *)
 Lemma Rmon_None_inv :
   forall csize pa pb,
   Rpid_opt (Some pa) pb ->
@@ -282,9 +308,15 @@ Lemma Rmon_None_inv :
     types_mon_t_pid := pb;
   |}.
 Proof.
-Admitted.
+  unfold Rmon, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
+  intros.
+  repeat case_match; try discriminate. 
+  - reflexivity.
+  - simpl in H0; unfold Rpid_opt, fun_hrel in H; congruence.
+Qed.
 
 
+(** Capabilities correspond if fields correspond. *)
 Lemma Rmon_Some_inv :
   forall mona monb,
   Rpid_opt mona.(cowner) monb.(types_mon_t_owner) ->
@@ -294,11 +326,16 @@ Lemma Rmon_Some_inv :
   Rpid_opt (Some mona.(cdata).(mpid)) monb.(types_mon_t_pid) ->
   Rmon (Some mona) monb.
 Proof.
+  destruct mona, cdata.
+  simpl.
+  unfold Rmon, Rpid_opt, Rnat, fun_hrel, ofun_hrel, mon_up, mbind, option_bind, mk_cap_opt.
   intros.
-Admitted.
+  repeat case_match; try discriminate; try congruence.
+Qed.
 
 (** Lemmas used for forward reasoning *)
 
+(** Correspondence results from Rmon *)
 Lemma Rmon_Some_corres :
   forall va vb,
   Rmon (Some va) vb ->
@@ -315,16 +352,7 @@ Proof.
   by repeat split.
 Qed.
 
-Lemma Rpid_opt_inv_Rmon :
-  forall va vb,
-  Rmon (Some va) vb ->
-  Rpid_opt (Some va.(cdata).(mpid)) vb.(types_mon_t_pid).
-Proof.
-  intros.
-  apply Rmon_Some_corres in H.
-  tauto.
-Qed.
-  
+(** Getting at a valid index preserves correspondence. *)
 Lemma mon_get_Some_corres :
   forall ta tb ia ib va,
   Rmon_table (CapTable ta) tb ->
@@ -350,6 +378,7 @@ Proof.
   - by pose proof Forall2_lookup_lr _ _ _ _ _ _ H2 H3 H1.
 Qed.
 
+(** When a concrete capability corresponds to None, it's owner field is invalid. *)
 Lemma Rmon_None_corres :
   forall ownera ownerb cb,
   Rpid_opt (Some ownera) ownerb ->
@@ -364,6 +393,7 @@ Proof.
   congruence.
 Qed.
 
+(** Rpid_opt is a one-to-one function. *)
 Lemma Rpid_opt_inj ownera ownerb ownera' ownerb':
   Rpid_opt ownera ownerb ->
   Rpid_opt ownera' ownerb' ->
@@ -374,19 +404,26 @@ Proof.
   repeat case_match; try discriminate.
   all: norm_cmp in *; subst; try (split; congruence).
   unfold int64_to_nat.
-  repr_elim in *.
+  repr_elim.
   split; intros.
   - inv H. rep_lia.
   - f_equal. rep_lia.
 Qed.
 
+(** When two tables correspond, they have the same length. *)
 Lemma Rmon_table_len_same :
   forall ta tb,
   Rmon_table (CapTable ta) tb ->
   length ta = length tb.
 Proof.
-Admitted.
+  unfold Rmon_table, mon_table_up, mbind, option_bind, ofun_hrel.
+  intros.
+  case_match; try discriminate.
+  inv H.
+  symmetry; by eapply length_mapM.
+Qed.
 
+(** Abstract lookup safety implies barocq get safety. *)
 Lemma lookup_Some_bget_safe {A} {B} :
   forall (ta : list A) (tb : list B) ia ib va,
   ta !! ia = Some va ->
@@ -394,21 +431,39 @@ Lemma lookup_Some_bget_safe {A} {B} :
   length ta = length tb ->
   exists vb, tb.[ib] = Some vb.
 Proof.
-Admitted.
+  intros.
+  assert (tb.[ib] <> None). {
+    apply bget_Some.
+    rewrite (int64_to_usize_to_nat_same H0).
+    rewrite <- H1.
+    by eapply lookup_lt_Some.
+  }
+  destruct tb.[ib].
+  - eauto.
+  - congruence.
+Qed.
 
 Section Length.
 
 Variable ta : list (option (cap_t mon_t)).
 Hypothesis mon_table_size : ctable_size (CapTable ta) = MON_SZ.
   
+(** When abstract lookup on monitor table succeeds, barocq array length runtime check
+succeeds. *)
 Lemma mon_lookup_Some_len :
   forall ia ib va,
   ta !! ia = Some va ->
   Rnat ia ib ->
   Int64.ltu ib Config_mon_table_size = true.
 Proof.
-  (* Use axioms about array lengths from invariants.v *)
-Admitted.
+  intros.
+  pose proof mon_sz_config_same.
+  unfold Rnat, int64_to_nat, fun_hrel in *.
+  norm_cmp.
+  pose proof lookup_lt_Some _ _ _ H.
+  simpl in mon_table_size.
+  rep_lia.
+Qed.
 
 Lemma mon_lookup_None_len :
   forall ia ib,
@@ -416,6 +471,14 @@ Lemma mon_lookup_None_len :
   Rnat ia ib ->
   Int64.ltu ib Config_mon_table_size = false.
 Proof.
-Admitted.
+  intros.
+  pose proof mon_sz_config_same.
+  unfold Rnat, int64_to_nat, fun_hrel in *.
+  norm_cmp.
+  pose proof lookup_ge_None_1 _ _ H.
+  simpl in mon_table_size.
+  rep_lia.
+Qed.
 
 End Length.
+
