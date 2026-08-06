@@ -2,14 +2,25 @@ From stdpp Require Import prelude.
 
 Set Implicit Arguments.
 
-(** * Refinement with safe execution *)
-Section SafeRefine.
+Section Refine.
+
+(** * Refinement relation between data types. *)
 
 (** A: abstract type, B: concrete type *)
 Variable A B : Type.
 
-(** R: Refinement mapping *)
+(** R: Refinement relation *)
 Variable R : A -> B -> Prop.
+
+(** [a] [b] are related by total specification function [f]. *)
+Definition fun_hrel (f : B -> A) : A -> B -> Prop :=
+  fun a b => f b = a.
+
+(** [a] [b] are related by partial specification function [f]. *)
+Definition ofun_hrel (f : B -> option A) : A -> B -> Prop :=
+  fun a b => f b = Some a.
+
+(** * Refinement relation with safe execution. *)
 
 (** Concrete code is safe while preserving refinement mapping. *)
 Definition safe_refine (a : A) (ob : option B) :=
@@ -33,5 +44,5 @@ Lemma safe_refine_Some : forall a b,
   safe_refine a (Some b).
 Proof. unfold safe_refine; intros; by exists b. Qed.
 
-End SafeRefine.
+End Refine.
 

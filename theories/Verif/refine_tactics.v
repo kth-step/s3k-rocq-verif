@@ -3,7 +3,7 @@ From Ltac2 Require Ltac2 Printf.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import cap util exec config.
 From S3K.Barocq Require Import S3K_ShallowR.
-From S3K.Verif Require Import tactics repr invariants barocq_aux safe_refine.
+From S3K.Verif Require Import gen_tactics invariants barocq_aux refine_util refine_map.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
 
@@ -56,7 +56,7 @@ Hint Rewrite Int64.repr_unsigned : s3k_arith.
 
 Module ltac2_tactics.
 
-Import Ltac2 Printf tactics.ltac2_tactics.
+Import Ltac2 Printf ltac2_tactics.
 
 (** Normalize length expressions into configured number. *)
 Ltac2 norm_length1 () :=

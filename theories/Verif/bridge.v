@@ -2,7 +2,7 @@ From stdpp Require Import prelude.
 From RecordUpdate Require Import RecordUpdate.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import kstate cap exec.
-From S3K.Verif Require Import tactics.
+From S3K.Verif Require Import gen_tactics.
 
 (** * Definitions bridging the gap between the concrete and abstract semantics. *)
 
@@ -33,6 +33,8 @@ Definition exec_mon_revoke' (kstate : kstate_t) (owner : nat) (i : nat) : option
   end.
 
 Section Bridge.
+
+(** * Equivalence proofs. *)
 
 Variable k : kstate_t.
 

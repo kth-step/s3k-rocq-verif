@@ -1,10 +1,10 @@
 -Q . S3K.Verif
 
-bridge.v
-repr.v
 invariants.v
 barocq_aux.v
-tactics.v
-safe_refine.v
+gen_tactics.v
+refine_util.v
+refine_map.v
 refine_tactics.v
+bridge.v
 refine.v

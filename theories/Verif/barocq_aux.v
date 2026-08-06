@@ -1,8 +1,9 @@
 From stdpp Require Import prelude.
 From compcert Require Import Integers.
+From S3K.ExecSem Require Import util.
 From S3K.BarocqComp Require Import Intop Barray.
 From S3K.BarocqComp Require Import ShallowNotations.
-From S3K.Verif Require Import tactics.
+From S3K.Verif Require Import gen_tactics.
 From VST Require Import Zlist.
 
 Set Implicit Arguments.
@@ -107,4 +108,19 @@ Proof.
 Qed.
 
 End Barray.
+
+Local Transparent Archi.ptr64 Wordsize_Ptrofs.wordsize.
+
+(** This is architecture dependent (not true for 32bit arch). If 64bit integer [ib] corresponds
+to natural number [ia], then turning it to usize then to natural number would still be ia. *)
+Lemma int64_to_usize_to_nat_same ib:
+  usize_to_nat (USIZE.of_u64 ib) = int64_to_nat ib.
+Proof.
+  intros.
+  unfold usize_to_nat, int64_to_nat, USIZE.to_Z, USIZE.of_u64.
+  f_equal.
+  apply Ptrofs.unsigned_repr.
+  replace Ptrofs.max_unsigned with Int64.max_unsigned by reflexivity.
+  apply Int64.unsigned_range_2.
+Qed.
 
