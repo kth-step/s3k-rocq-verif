@@ -157,7 +157,18 @@ Ltac rep_lia :=
 (** * Ltac2 utilities *)
 Module ltac2_tactics.
 
-Import Ltac2.
+Import Ltac2 Message.
+
+(** use [Ltac2 Set ltac2_debug_flag := true.] to turn on debugging. *)
+Ltac2 mutable ltac2_debug_flag := false.
+
+Ltac2 Notation "debug_printf" fmt(format) :=
+  Format.kfprintf
+    (fun msg =>
+       if ltac2_debug_flag
+       then print msg
+       else ())
+    fmt.
 
 Ltac2 fail_with_msg (s : string) := Control.backtrack_tactic_failure s.
 

@@ -1,5 +1,5 @@
 From stdpp Require Import prelude.
-From Ltac2 Require Ltac2 Printf.
+From Ltac2 Require Ltac2.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import cap util exec config.
 From S3K.Barocq Require Import S3K_ShallowR.
@@ -56,7 +56,7 @@ Hint Rewrite Int64.repr_unsigned : s3k_arith.
 
 Module ltac2_tactics.
 
-Import Ltac2 Printf ltac2_tactics.
+Import Ltac2 ltac2_tactics.
 
 (** Normalize length expressions into configured number. *)
 Ltac2 norm_length1 () :=
@@ -114,7 +114,7 @@ Ltac2 Notation "forward_hyp_corres" := repeat (forward_hyp_corres1 ()).
 
 (** Solve arithmetic goal with CompCert integers. *)
 Ltac2 solve_arith () :=
-  printf "Trying to solve arithmetic goal: %t" (Control.goal ());
+  debug_printf "Trying to solve arithmetic goal: %t" (Control.goal ());
   forward_range;
   forward_hyp_corres;
   ltac1:(autounfold with s3k_arith in *);
@@ -124,7 +124,7 @@ Ltac2 solve_arith () :=
 
 (** Try solve correspondence goal t and return the hypothesis, may fail. *)
 Ltac2 get_or_solve_corres (t : constr) : constr :=
-  printf "solving corres %t" t;
+  debug_printf "solving corres %t" t;
   let oh := List.find_opt (fun (_,_,ty) => Constr.equal t ty) (Control.hyps ()) in
   match oh with
   (* if in goal already *)
@@ -211,14 +211,14 @@ Ltac2 forward_abstract_lookup_Some (h : constr) :=
       let hvb:= Control.hyp hvb in
       trivial_erewrite ?($hvb), ?(mon_lookup_Some_len _ _ $h $hi); simpl;
       (* 2. Destruct abstract optional capability *)
-      printf "Case analysis on whether abstract capability is physically deleted or not ";
+      debug_printf "Case analysis on whether abstract capability is physically deleted or not ";
       Control.enter (fun _ => forward_abstract_opt_cap va);
       (* 3. Forward barocq set at the same index *)
       try (forward_concrete_map_set ())
     | [ |- context[?tb.[USIZE.of_u64 ?ib]]] =>
       (* Case for only index correspondence. Since barocq has in-place-update semantic,
          table may be different. Can still simplify for safe execution. *)
-      printf "trying to just solve hi: %t" '(Rnat $ia $ib); 
+      debug_printf "trying to just solve hi: %t" '(Rnat $ia $ib); 
       let hi := get_or_solve_corres '(Rnat $ia $ib) in
       (* 1. Barocq get safe *)
       let hlen := Fresh.in_goal @Hlen in
@@ -244,7 +244,7 @@ Ltac2 forward_abstract_lookup (h : constr) :=
 
 (** Solve concrete condition. *)
 Ltac2 solve_concrete_cond () :=
-  printf "Trying to solve concrete condition: %t" (Control.goal ());
+  debug_printf "Trying to solve concrete condition: %t" (Control.goal ());
   (* normalize hypotheses *)
   destruct_and?; destruct_or?;
   forward_hyp_corres;
@@ -265,7 +265,7 @@ Ltac2 forward_concrete_cond () :=
       assert ($b = false) as $hcond by solve_concrete_cond () ];
     let hcond := Control.hyp hcond in
     rewrite! $hcond; simpl
-  | [ |- _ ] => printf "Failed to solve any concrete condition."
+  | [ |- _ ] => debug_printf "Failed to solve any concrete condition."
   end.
   
 (** Find decision in abstract model, do case analysis and try simplifying and
@@ -276,14 +276,14 @@ Ltac2 forward_abstract () :=
       first [
         lazy_match! (Constr.type t) with
         (* Destruct cap table of single construtor CapTable *)
-        | mon_table_t => destruct $t eqn:?; printf "Getting rid of CapTable"
-        | cap_table_t _  => destruct $t eqn:?; printf "Getting rid of CapTable"
+        | mon_table_t => destruct $t eqn:?; debug_printf "Getting rid of CapTable"
+        | cap_table_t _  => destruct $t eqn:?; debug_printf "Getting rid of CapTable"
         end |
         lazy_match! t with
         |  ?l !! ?ia =>
           (* Destruct result of abstract lookup *)
             let h := Fresh.in_goal @Hlookup in
-            printf "Case analysis on capability table lookup";
+            debug_printf "Case analysis on capability table lookup";
             destruct $t eqn:$h; Control.enter (fun () => forward_abstract_lookup (Control.hyp h))
         | @decide ?p ?d =>
           (* Destruct abstract decision, also try derive facts for concrete level  *)
