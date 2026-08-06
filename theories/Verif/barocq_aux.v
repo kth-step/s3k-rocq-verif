@@ -30,11 +30,9 @@ Proof.
   generalize (Z.to_nat z) as n.
   clear z H.
   revert t.
-  induction t.
-  - reflexivity.
-  - destruct n.
-    + reflexivity.
-    + simpl; rewrite <- Nat2Z.inj_pred; [ done | by lia ].
+  induction t; first done.
+  destruct n; first done.
+  by simpl; rewrite <- Nat2Z.inj_pred; [ | lia ].
 Qed.
 
 Lemma bget_Some_lt :
@@ -60,7 +58,6 @@ Proof.
   rep_lia.
 Qed.
 
-(* Credit: Karl Palmskog. *)
 Lemma bset_Some_insert :
   forall (t t' : list A) i v,
   t.[i <- v] = Some t' ->

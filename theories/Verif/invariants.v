@@ -18,4 +18,3 @@ Remark tsl_sz_config_same :
   TSL_SZ = int64_to_nat Config_tsl_table_size.
 Proof. unfold int64_to_nat; rewrite tsl_sz_config; repr_elim; reflexivity. Qed.
 
-
