@@ -29,4 +29,4 @@ theories/Verif/refine_util.v
 theories/Verif/refine_map.v
 theories/Verif/refine_tactics.v
 theories/Verif/bridge.v
-theories/Verif/refine.v
+theories/Verif/refinements.v
