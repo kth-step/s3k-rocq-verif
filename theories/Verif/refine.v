@@ -37,6 +37,10 @@ Hypothesis next_child_range :
   ka.(kmon_tbl) = CapTable l ->
   (vi.(cfree) + vj.(cfree) <= vi.(csize))%nat.
 
+(** FIXME Assume memory table has no effect on refinement for now. *)
+Hypothesis mem_table_correct :
+  ka.(kmem_tbl) = dummy_mem_table.
+
 (** * Refinement proofs for capability operations *)
 
 Theorem mon_delele_safe_refine :

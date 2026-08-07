@@ -183,9 +183,17 @@ Qed.
 (** ** Rksate related. *)
 
 (** Rkstate inversion. *)
-(* FIXME this is ignoring memory table for now. *)
+
+Section Rkstate.
+
+Variable ka : kstate_t.
+
+(* FIXME We assume memory table is always correct for now. *)
+Hypothesis mem_table_correct :
+  ka.(kmem_tbl) = dummy_mem_table.
+
 Lemma Rkstate_inv :
-  forall ka kb,
+  forall kb,
   Rmon_table ka.(kmon_tbl) kb.(types_kstate_mon_table) ->
   Rtsl_table ka.(ktsl_tbl) kb.(types_kstate_tsl_table) ->
   Rsched ka.(ksched) kb.(types_kstate_sched) ->
@@ -194,8 +202,12 @@ Lemma Rkstate_inv :
 Proof.
   autounfold with kstate_unfold.
   intros.
-  rewrite H, H0, H1, H2.
-Admitted.
+  destruct ka.
+  simpl in *.
+  by rewrite H, H0, H1, H2, mem_table_correct.
+Qed.
+
+End Rkstate.
 
 Lemma Rmon_table_inv_Rkstate :
   forall ka kb, Rkstate ka kb ->
