@@ -22,7 +22,7 @@ theories/ExecSem/sched.v
 theories/ExecSem/kstate.v
 theories/ExecSem/exec.v
 
-theories/Verif/invariants.v
+theories/Verif/axioms.v
 theories/Verif/barocq_aux.v
 theories/Verif/gen_tactics.v
 theories/Verif/refine_util.v

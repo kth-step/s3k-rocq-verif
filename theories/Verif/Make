@@ -1,6 +1,6 @@
 -Q . S3K.Verif
 
-invariants.v
+axioms.v
 barocq_aux.v
 gen_tactics.v
 refine_util.v

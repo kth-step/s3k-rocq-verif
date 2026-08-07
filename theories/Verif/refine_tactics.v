@@ -3,9 +3,9 @@ From Ltac2 Require Ltac2.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import cap util exec config.
 From S3K.Barocq Require Import S3K_ShallowR.
-From S3K.Verif Require Import gen_tactics invariants barocq_aux refine_util refine_map.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
+From S3K.Verif Require Import axioms gen_tactics barocq_aux refine_util refine_map.
 
 (** * Tactics and hints for refinement proofs *)
 

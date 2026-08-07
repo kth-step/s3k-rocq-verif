@@ -5,7 +5,7 @@ From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util proc sched config.
 From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
-From S3K.Verif Require Import barocq_aux invariants gen_tactics refine_util.
+From S3K.Verif Require Import barocq_aux axioms gen_tactics refine_util.
 
 Import IntopNotations.
 
