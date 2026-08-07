@@ -76,7 +76,6 @@ Record Types_tsl_t := mk_Types_tsl_t {
   types_tsl_t_cfree: u64;
   types_tsl_t_csize: u64;
   types_tsl_t_hart: u64;
-  types_tsl_t_enabled: bool;
   types_tsl_t_base: u64;
   types_tsl_t_size: u64;
   types_tsl_t_free: u64
@@ -117,6 +116,7 @@ Record Types_frame_t := mk_Types_frame_t {
 
 Record Types_kstate := mk_Types_kstate {
   types_kstate_procs: list Types_proc_t;
+  types_kstate_sched: list (list Types_frame_t);
   types_kstate_tsl_table: list Types_tsl_t;
   types_kstate_mon_table: list Types_mon_t;
   types_kstate_ipc_table: list Types_ipc_t;
@@ -195,7 +195,7 @@ Instance eta_Types_proc_t : Settable Types_proc_t :=
   settable! mk_Types_proc_t <types_proc_t_state; types_proc_t_regs; types_proc_t_pmp; types_proc_t_trap; types_proc_t_timeout; types_proc_t_pid>.
 
 Instance eta_Types_tsl_t : Settable Types_tsl_t :=
-  settable! mk_Types_tsl_t <types_tsl_t_owner; types_tsl_t_cfree; types_tsl_t_csize; types_tsl_t_hart; types_tsl_t_enabled; types_tsl_t_base; types_tsl_t_size; types_tsl_t_free>.
+  settable! mk_Types_tsl_t <types_tsl_t_owner; types_tsl_t_cfree; types_tsl_t_csize; types_tsl_t_hart; types_tsl_t_base; types_tsl_t_size; types_tsl_t_free>.
 
 Instance eta_Types_mem_t : Settable Types_mem_t :=
   settable! mk_Types_mem_t <types_mem_t_owner; types_mem_t_cfree; types_mem_t_csize; types_mem_t_slot; types_mem_t_rwx; types_mem_t_base; types_mem_t_size>.
@@ -210,7 +210,7 @@ Instance eta_Types_frame_t : Settable Types_frame_t :=
   settable! mk_Types_frame_t <types_frame_t_pid; types_frame_t_length>.
 
 Instance eta_Types_kstate : Settable Types_kstate :=
-  settable! mk_Types_kstate <types_kstate_procs; types_kstate_tsl_table; types_kstate_mon_table; types_kstate_ipc_table; types_kstate_message; types_kstate_active_pid; types_kstate_errcode>.
+  settable! mk_Types_kstate <types_kstate_procs; types_kstate_sched; types_kstate_tsl_table; types_kstate_mon_table; types_kstate_ipc_table; types_kstate_message; types_kstate_active_pid; types_kstate_errcode>.
 
 (** * Auxiliary functions *)
 
@@ -468,10 +468,6 @@ Definition neqb (b1 b2: bool) := negb (eqb b1 b2).
 
 Parameter Kernel_ks : Types_kstate.
 
-Parameter Machine_sched_split : u64 -> u64 -> u64 -> u64 -> u64 -> option u64.
-
-Parameter Machine_sched_set_pid : u64 -> u64 -> u64 -> option u64.
-
 Parameter Machine_lock_acquire : bool -> option bool.
 
 Parameter Machine_lock_release : unit -> option u64.
@@ -505,6 +501,8 @@ Definition Config_mon_table_size : u64 := 32UL.
 Definition Config_max_ipc_fuel : u64 := 16UL.
 
 Definition Config_ipc_table_size : u64 := 16UL.
+
+Definition Config_max_time_slot : u64 := 32UL.
 
 Definition Error_success : i64 := 0L.
 
@@ -615,6 +613,15 @@ Definition Proc_release (ks: Types_kstate) (pid: u64) : option Types_kstate :=
   let* state := Proc_get_state ks pid in
   Proc_set_state ks pid (state &₆₄ (Int64.not Proc_proc_STATE_ACQUIRED)).
 
+Definition Sched_set (sched: list (list Types_frame_t)) (hart: u64) (begin: u64) (pid: u64) (length: u64) : option (list (list Types_frame_t)) :=
+  let* hsched := sched.[hart] in
+  let* frame :=
+    let* b1 := hsched.[begin] in
+    ret ((b1 <| types_frame_t_pid := pid |>) <| types_frame_t_length := length |>)
+  in
+  let* hsched := hsched.[begin <- frame] in
+  sched.[hart <- hsched].
+
 Definition Exception_handle_mret (proc: Types_proc_t) : option Types_proc_t :=
   let trap := proc.(types_proc_t_trap) in
   let regs := proc.(types_proc_t_regs) in
@@ -671,19 +678,18 @@ Definition Tsl_delete (ks: Types_kstate) (owner: u64) (i: u64) : option Types_ks
       let* b2 := tsl_table.[i] in
       ret (b2 <| types_tsl_t_owner := 0UL |>)
     in
-    let* dummy :=
-      if (Int64.cmpu Cgt cap.(types_tsl_t_free) 0UL) then
-        Machine_sched_set_pid cap.(types_tsl_t_hart) 0UL cap.(types_tsl_t_base)
-      else
-        ret 0UL
-    in
     let* tsl_table := tsl_table.[i <- cap] in
-    let ks := ks <| types_kstate_tsl_table := tsl_table |> in
-    ret (ks <| types_kstate_errcode := Error_success |>)
+    let* sched :=
+      if (Int64.cmpu Cgt cap.(types_tsl_t_free) 0UL) then
+        Sched_set ks.(types_kstate_sched) cap.(types_tsl_t_hart) cap.(types_tsl_t_base) 0UL cap.(types_tsl_t_free)
+      else
+        ret ks.(types_kstate_sched)
+    in
+    ret (((ks <| types_kstate_tsl_table := tsl_table |>) <| types_kstate_sched := sched |>) <| types_kstate_errcode := Error_success |>)
   else
     ret (ks <| types_kstate_errcode := Error_invalid_access |>).
 
-Definition Tsl_derive (ks: Types_kstate) (owner: u64) (i: u64) (target: u64) (csize: u64) (enable: bool) (size: u64) : option Types_kstate :=
+Definition Tsl_derive (ks: Types_kstate) (owner: u64) (i: u64) (target: u64) (csize: u64) (size: u64) : option Types_kstate :=
   let* b1 := Tsl_valid_access ks owner i in
   if b1 then
     let tsl_table := ks.(types_kstate_tsl_table) in
@@ -691,78 +697,43 @@ Definition Tsl_derive (ks: Types_kstate) (owner: u64) (i: u64) (target: u64) (cs
     if (Tsl_not_derivable cap_i csize size) then
       ret (ks <| types_kstate_errcode := Error_invalid_argument |>)
     else
-      let cap_i := (cap_i <| types_tsl_t_cfree := cap_i.(types_tsl_t_cfree) -₆₄ csize |>) <| types_tsl_t_free := cap_i.(types_tsl_t_free) -₆₄ size |> in
-      let j := i +₆₄ cap_i.(types_tsl_t_cfree) in
-      let base := cap_i.(types_tsl_t_base) +₆₄ cap_i.(types_tsl_t_free) in
+      let i_base := cap_i.(types_tsl_t_base) in
+      let i_free := cap_i.(types_tsl_t_free) -₆₄ size in
+      let i_owner := cap_i.(types_tsl_t_owner) in
       let hart := cap_i.(types_tsl_t_hart) in
+      let cap_i := (cap_i <| types_tsl_t_cfree := cap_i.(types_tsl_t_cfree) -₆₄ csize |>) <| types_tsl_t_free := i_free |> in
       let* tsl_table := tsl_table.[i <- cap_i] in
+      let j := i +₆₄ cap_i.(types_tsl_t_cfree) in
+      let j_base := i_base +₆₄ i_free in
       let* cap_j :=
         let* b2 := tsl_table.[j] in
-        ret ((((((((b2 <| types_tsl_t_owner := target |>) <| types_tsl_t_cfree := csize |>) <| types_tsl_t_csize := csize |>) <| types_tsl_t_hart := hart |>) <| types_tsl_t_enabled := enable |>) <| types_tsl_t_base := base |>) <| types_tsl_t_size := size |>) <| types_tsl_t_free := size |>)
+        ret (((((((b2 <| types_tsl_t_owner := target |>) <| types_tsl_t_cfree := csize |>) <| types_tsl_t_csize := csize |>) <| types_tsl_t_hart := hart |>) <| types_tsl_t_base := j_base |>) <| types_tsl_t_size := size |>) <| types_tsl_t_free := size |>)
       in
       let* tsl_table := tsl_table.[j <- cap_j] in
-      let sched_pid :=
-        if enable then
-          target
-        else
-          0UL
+      let* sched :=
+        let* b3 := Sched_set ks.(types_kstate_sched) hart i_base i_owner i_free in
+        Sched_set b3 hart j_base target size
       in
-      let* cap_i := tsl_table.[i] in
-      let* dummy := Machine_sched_split cap_i.(types_tsl_t_hart) sched_pid cap_i.(types_tsl_t_base) base (base +₆₄ size) in
-      let ks := ks <| types_kstate_tsl_table := tsl_table |> in
-      ret (ks <| types_kstate_errcode := I64.of_u64 j |>)
+      ret (((ks <| types_kstate_tsl_table := tsl_table |>) <| types_kstate_sched := sched |>) <| types_kstate_errcode := I64.of_u64 j |>)
   else
     ret (ks <| types_kstate_errcode := Error_invalid_access |>).
 
-Definition Tsl_set (ks: Types_kstate) (owner: u64) (i: u64) (enable: bool) : option Types_kstate :=
+Definition Tsl_transfer (ks: Types_kstate) (owner: u64) (i: u64) (target: u64) : option Types_kstate :=
   let* b1 := Tsl_valid_access ks owner i in
   if b1 then
     let tsl_table := ks.(types_kstate_tsl_table) in
     let* cap :=
       let* b2 := tsl_table.[i] in
-      ret (b2 <| types_tsl_t_enabled := enable |>)
+      ret (b2 <| types_tsl_t_owner := target |>)
     in
-    let* dummy :=
+    let* sched :=
       if (Int64.cmpu Cgt cap.(types_tsl_t_free) 0UL) then
-        let sched_pid :=
-          if enable then
-            owner
-          else
-            0UL
-        in
-        Machine_sched_set_pid cap.(types_tsl_t_hart) sched_pid cap.(types_tsl_t_base)
+        Sched_set ks.(types_kstate_sched) cap.(types_tsl_t_hart) cap.(types_tsl_t_base) target cap.(types_tsl_t_free)
       else
-        ret 0UL
+        ret ks.(types_kstate_sched)
     in
     let* tsl_table := tsl_table.[i <- cap] in
-    let ks := ks <| types_kstate_tsl_table := tsl_table |> in
-    ret (ks <| types_kstate_errcode := Error_success |>)
-  else
-    ret (ks <| types_kstate_errcode := Error_invalid_access |>).
-
-Definition Tsl_transfer (ks: Types_kstate) (owner: u64) (i: u64) (new_owner: u64) : option Types_kstate :=
-  let* b1 := Tsl_valid_access ks owner i in
-  if b1 then
-    let tsl_table := ks.(types_kstate_tsl_table) in
-    let* cap :=
-      let* b2 := tsl_table.[i] in
-      ret (b2 <| types_tsl_t_owner := new_owner |>)
-    in
-    let* dummy :=
-      if (Int64.cmpu Cgt cap.(types_tsl_t_free) 0UL) then
-        let sched_pid :=
-          if cap.(types_tsl_t_enabled) then
-            new_owner
-          else
-            0UL
-        in
-        Machine_sched_set_pid cap.(types_tsl_t_hart) sched_pid cap.(types_tsl_t_base)
-      else
-        ret 0UL
-    in
-    let* tsl_table := tsl_table.[i <- cap] in
-    let ks := ks <| types_kstate_tsl_table := tsl_table |> in
-    ret (ks <| types_kstate_errcode := Error_success |>)
+    ret (((ks <| types_kstate_tsl_table := tsl_table |>) <| types_kstate_sched := sched |>) <| types_kstate_errcode := Error_success |>)
   else
     ret (ks <| types_kstate_errcode := Error_invalid_access |>).
 
@@ -775,16 +746,42 @@ Definition Tsl_revoke_once (ks: Types_kstate) (i: u64) : option Types_kstate :=
       let* b3 := tsl_table.[i] in
       ret (i +₆₄ b3.(types_tsl_t_cfree))
     in
-    let* cap_j := tsl_table.[j] in
-    let j_cfree := cap_j.(types_tsl_t_cfree) in
-    let j_free := cap_j.(types_tsl_t_free) in
-    let cap_j := (cap_j <| types_tsl_t_owner := 0UL |>) <| types_tsl_t_cfree := 0UL |> in
-    let* tsl_table := tsl_table.[j <- cap_j] in
+    let* j_cfree :=
+      let* b4 := tsl_table.[j] in
+      ret b4.(types_tsl_t_cfree)
+    in
+    let* j_free :=
+      let* b5 := tsl_table.[j] in
+      ret b5.(types_tsl_t_free)
+    in
+    let* j_hart :=
+      let* b6 := tsl_table.[j] in
+      ret b6.(types_tsl_t_hart)
+    in
+    let* j_base :=
+      let* b7 := tsl_table.[j] in
+      ret b7.(types_tsl_t_base)
+    in
     let* cap_i := tsl_table.[i] in
-    let cap_i := (cap_i <| types_tsl_t_cfree := cap_i.(types_tsl_t_cfree) +₆₄ j_cfree |>) <| types_tsl_t_free := cap_i.(types_tsl_t_free) +₆₄ j_free |> in
+    let i_hart := cap_i.(types_tsl_t_hart) in
+    let i_base := cap_i.(types_tsl_t_base) in
+    let i_owner := cap_i.(types_tsl_t_owner) in
+    let i_free := cap_i.(types_tsl_t_free) +₆₄ j_free in
+    let cap_i := (cap_i <| types_tsl_t_cfree := cap_i.(types_tsl_t_cfree) +₆₄ j_cfree |>) <| types_tsl_t_free := i_free |> in
     let errcode := cap_i.(types_tsl_t_csize) -₆₄ cap_i.(types_tsl_t_cfree) in
     let* tsl_table := tsl_table.[i <- cap_i] in
-    ret ((ks <| types_kstate_tsl_table := tsl_table |>) <| types_kstate_errcode := I64.of_u64 errcode |>)
+    let* tsl_table :=
+      let* b8 := tsl_table.[j] in
+      tsl_table.[j <- ((b8 <| types_tsl_t_owner := 0UL |>) <| types_tsl_t_cfree := 0UL |>)]
+    in
+    let* sched :=
+      if (Int64.cmpu Cgt j_free 0UL) then
+        let* b9 := Sched_set ks.(types_kstate_sched) j_hart j_base 0UL 0UL in
+        Sched_set b9 i_hart i_base i_owner i_free
+      else
+        ret ks.(types_kstate_sched)
+    in
+    ret (((ks <| types_kstate_tsl_table := tsl_table |>) <| types_kstate_errcode := I64.of_u64 errcode |>) <| types_kstate_sched := sched |>)
   else
     ret (ks <| types_kstate_errcode := Error_success |>).
 
@@ -869,14 +866,18 @@ Definition Mon_revoke_once (ks: Types_kstate) (i: u64) : option Types_kstate :=
       let* b3 := mon_table.[i] in
       ret (i +₆₄ b3.(types_mon_t_cfree))
     in
-    let* cap_j := mon_table.[j] in
-    let j_cfree := cap_j.(types_mon_t_cfree) in
-    let cap_j := (cap_j <| types_mon_t_owner := 0UL |>) <| types_mon_t_cfree := 0UL |> in
-    let* mon_table := mon_table.[j <- cap_j] in
+    let* j_cfree :=
+      let* b4 := mon_table.[j] in
+      ret b4.(types_mon_t_cfree)
+    in
     let* cap_i := mon_table.[i] in
     let cap_i := cap_i <| types_mon_t_cfree := cap_i.(types_mon_t_cfree) +₆₄ j_cfree |> in
     let errcode := cap_i.(types_mon_t_csize) -₆₄ cap_i.(types_mon_t_cfree) in
     let* mon_table := mon_table.[i <- cap_i] in
+    let* mon_table :=
+      let* b5 := mon_table.[j] in
+      mon_table.[j <- ((b5 <| types_mon_t_owner := 0UL |>) <| types_mon_t_cfree := 0UL |>)]
+    in
     ret ((ks <| types_kstate_mon_table := mon_table |>) <| types_kstate_errcode := I64.of_u64 errcode |>)
   else
     ret (ks <| types_kstate_errcode := Error_success |>).
@@ -1224,12 +1225,12 @@ Definition Syscall_mon_ipc_grant (ks: Types_kstate) (owner: u64) (i: u64) (j: u6
   else
     Ipc_transfer ks owner j target.
 
-Definition Syscall_mon_tsl_derive (ks: Types_kstate) (owner: u64) (i: u64) (j: u64) (csize: u64) (enable: bool) (size: u64) : option Types_kstate :=
+Definition Syscall_mon_tsl_derive (ks: Types_kstate) (owner: u64) (i: u64) (j: u64) (csize: u64) (size: u64) : option Types_kstate :=
   let* target := Mon_get_pid ks owner i in
   if (Int64.eq target 0UL) then
     ret (ks <| types_kstate_errcode := Error_invalid_access |>)
   else
-    Tsl_derive ks owner j target csize enable size.
+    Tsl_derive ks owner j target csize size.
 
 Definition Syscall_mon_mon_derive (ks: Types_kstate) (owner: u64) (i: u64) (j: u64) (csize: u64) : option Types_kstate :=
   let* target := Mon_get_pid ks owner i in
@@ -1244,13 +1245,6 @@ Definition Syscall_mon_ipc_derive (ks: Types_kstate) (owner: u64) (i: u64) (j: u
     ret (ks <| types_kstate_errcode := Error_invalid_access |>)
   else
     Ipc_derive ks owner j target csize mode flag.
-
-Definition Syscall_mon_tsl_set (ks: Types_kstate) (owner: u64) (i: u64) (j: u64) (enable: bool) : option Types_kstate :=
-  let* target := Mon_get_pid ks owner i in
-  if (Int64.eq target 0UL) then
-    ret (ks <| types_kstate_errcode := Error_invalid_access |>)
-  else
-    Tsl_set ks target j enable.
 
 Definition Syscall_get_ret (ks: Types_kstate) : u64 :=
   U64.of_i64 ks.(types_kstate_errcode).
@@ -1267,12 +1261,8 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
     | Syscall_Syscall_tsl_derive =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* csize := Proc_get_reg ks pid Types_Reg_a2 in
-        let* enable :=
-          let* b1 := Proc_get_reg ks pid Types_Reg_a3 in
-          ret (Int64.cmpu Cgt b1 0UL)
-        in
-        let* size := Proc_get_reg ks pid Types_Reg_a4 in
-        Tsl_derive ks pid i pid csize enable size
+        let* size := Proc_get_reg ks pid Types_Reg_a3 in
+        Tsl_derive ks pid i pid csize size
     | Syscall_Syscall_mon_derive =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* csize := Proc_get_reg ks pid Types_Reg_a2 in
@@ -1281,12 +1271,12 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* csize := Proc_get_reg ks pid Types_Reg_a2 in
         let* mode :=
-          let* b2 := Proc_get_reg ks pid Types_Reg_a3 in
-          ret (U32.of_u64 b2)
+          let* b1 := Proc_get_reg ks pid Types_Reg_a3 in
+          ret (U32.of_u64 b1)
         in
         let* flag :=
-          let* b3 := Proc_get_reg ks pid Types_Reg_a4 in
-          ret (U32.of_u64 b3)
+          let* b2 := Proc_get_reg ks pid Types_Reg_a4 in
+          ret (U32.of_u64 b2)
         in
         Ipc_derive ks pid i pid csize mode flag
     | Syscall_Syscall_tsl_revoke =>
@@ -1307,13 +1297,6 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
     | Syscall_Syscall_ipc_delete =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         Ipc_delete ks pid i
-    | Syscall_Syscall_tsl_set =>
-        let* i := Proc_get_reg ks pid Types_Reg_a1 in
-        let* enable :=
-          let* b4 := Proc_get_reg ks pid Types_Reg_a2 in
-          ret (Int64.cmpu Cgt b4 0UL)
-        in
-        Tsl_set ks pid i enable
     | Syscall_Syscall_mon_tsl_grant =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* j := Proc_get_reg ks pid Types_Reg_a2 in
@@ -1330,12 +1313,8 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* j := Proc_get_reg ks pid Types_Reg_a2 in
         let* csize := Proc_get_reg ks pid Types_Reg_a3 in
-        let* enable :=
-          let* b5 := Proc_get_reg ks pid Types_Reg_a4 in
-          ret (Int64.cmpu Cgt b5 0UL)
-        in
-        let* size := Proc_get_reg ks pid Types_Reg_a5 in
-        Syscall_mon_tsl_derive ks pid i j csize enable size
+        let* size := Proc_get_reg ks pid Types_Reg_a4 in
+        Syscall_mon_tsl_derive ks pid i j csize size
     | Syscall_Syscall_mon_mon_derive =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* j := Proc_get_reg ks pid Types_Reg_a2 in
@@ -1346,28 +1325,20 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
         let* j := Proc_get_reg ks pid Types_Reg_a2 in
         let* csize := Proc_get_reg ks pid Types_Reg_a3 in
         let* mode :=
-          let* b6 := Proc_get_reg ks pid Types_Reg_a4 in
-          ret (U32.of_u64 b6)
+          let* b3 := Proc_get_reg ks pid Types_Reg_a4 in
+          ret (U32.of_u64 b3)
         in
         let* flag :=
-          let* b7 := Proc_get_reg ks pid Types_Reg_a5 in
-          ret (U32.of_u64 b7)
+          let* b4 := Proc_get_reg ks pid Types_Reg_a5 in
+          ret (U32.of_u64 b4)
         in
         Syscall_mon_ipc_derive ks pid i j csize mode flag
-    | Syscall_Syscall_mon_tsl_set =>
-        let* i := Proc_get_reg ks pid Types_Reg_a1 in
-        let* j := Proc_get_reg ks pid Types_Reg_a2 in
-        let* enable :=
-          let* b8 := Proc_get_reg ks pid Types_Reg_a3 in
-          ret (Int64.cmpu Cgt b8 0UL)
-        in
-        Syscall_mon_tsl_set ks pid i j enable
     | Syscall_Syscall_ipc_call =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* ks :=
-          let* b9 := Proc_get_reg ks pid Types_Reg_a2 in
-          let* b10 := Proc_get_reg ks pid Types_Reg_a3 in
-          Syscall_set_message ks b9 b10
+          let* b5 := Proc_get_reg ks pid Types_Reg_a2 in
+          let* b6 := Proc_get_reg ks pid Types_Reg_a3 in
+          Syscall_set_message ks b5 b6
         in
         let* capty := Proc_get_reg ks pid Types_Reg_a4 in
         let* j := Proc_get_reg ks pid Types_Reg_a5 in
@@ -1375,9 +1346,9 @@ Definition Syscall_do (ks: Types_kstate) (pid: u64) (call: Syscall_syscall) : op
     | Syscall_Syscall_ipc_replyrecv =>
         let* i := Proc_get_reg ks pid Types_Reg_a1 in
         let* ks :=
-          let* b11 := Proc_get_reg ks pid Types_Reg_a2 in
-          let* b12 := Proc_get_reg ks pid Types_Reg_a3 in
-          Syscall_set_message ks b11 b12
+          let* b7 := Proc_get_reg ks pid Types_Reg_a2 in
+          let* b8 := Proc_get_reg ks pid Types_Reg_a3 in
+          Syscall_set_message ks b7 b8
         in
         let* capty := Proc_get_reg ks pid Types_Reg_a4 in
         let* j := Proc_get_reg ks pid Types_Reg_a5 in
