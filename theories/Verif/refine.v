@@ -50,8 +50,7 @@ Theorem mon_delele_safe_refine :
   Rnat ia ib ->
   safe_refine Rkstate_with_err (exec_mon_delete ka ownera ia) (Mon_delete kb ownerb ib).
 Proof.
-  unfold exec_mon_delete, Mon_delete.
-  prepare_corres.
+  prepare_corres exec_mon_delete Mon_delete.
   gen_corres; solve_corres.
 Qed.
 
@@ -63,8 +62,7 @@ Theorem mon_transfer_safe_refine :
   Rpid_opt (Some new_ownera) new_ownerb ->
   safe_refine Rkstate_with_err (exec_mon_transfer ka ownera ia new_ownera) (Mon_transfer kb ownerb ib new_ownerb).
 Proof.
-  unfold exec_mon_transfer, Mon_transfer.
-  prepare_corres.
+  prepare_corres exec_mon_transfer Mon_transfer.
   gen_corres; solve_corres.
 Qed.
 
@@ -76,8 +74,7 @@ Theorem mon_derive_safe_refine :
   Rnat csizea csizeb ->
   safe_refine_opt Rkstate_with_err (exec_mon_derive ka ownera ia csizea) (Mon_derive kb ownerb ib ownerb csizeb).
 Proof.
-  unfold exec_mon_derive, Mon_derive.
-  prepare_corres.
+  prepare_corres exec_mon_derive Mon_derive.
   gen_corres; solve_corres.
 Qed.
 
@@ -88,10 +85,8 @@ Theorem mon_revoke_safe_refine :
   Rnat ia ib ->
   safe_refine_opt Rkstate_with_err (exec_mon_revoke' ka ownera ia) (Mon_revoke kb ownerb ib).
 Proof.
-  unfold exec_mon_revoke', Mon_revoke, Mon_revoke_once.
-  prepare_corres.
+  prepare_corres exec_mon_revoke' Mon_revoke Mon_revoke_once.
   gen_corres; solve_corres.
 Qed.
 
 End S3KRefine.
-

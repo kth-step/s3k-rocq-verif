@@ -235,9 +235,21 @@ Ltac2 repr_elim1 () :=
 
 Ltac2 Notation "repr_elim" := repeat (repr_elim1 ()).
 
+Ltac2 get_constr (x : Ltac1.t) :=
+  Option.get (Ltac1.to_constr x).
+
+Ltac2 get_constr_list (xs : Ltac1.t) :=
+  let xs := Option.get (Ltac1.to_list xs) in
+  List.map get_constr xs.
+
+Ltac2 run_ltac1_on_constr (tac : Ltac1.t) (x : constr) :=
+  Ltac1.apply tac [Ltac1.of_constr x] Ltac1.run.
+
+Ltac2 iter_unfold (refs : constr list) :=
+  List.iter (run_ltac1_on_constr ltac1val:(fun x => unfold x)) refs.
+
 End ltac2_tactics.
 
 Import ltac2_tactics.
 
 Ltac repr_elim := ltac2:(repr_elim).
-

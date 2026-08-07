@@ -55,7 +55,8 @@ Hint Rewrite Int64.repr_unsigned : s3k_arith.
 
 Module ltac2_tactics.
 
-Import Ltac2 ltac2_tactics.
+Import Ltac2.
+Export ltac2_tactics.
 
 (** Normalize length expressions into configured number. *)
 Ltac2 norm_length1 () :=
@@ -305,8 +306,9 @@ Hint Extern 10 (err_success _ = _) => solve_arith : s3k_inv.
 
 Ltac forward_abstract := ltac2:(forward_abstract ()).
 
-Ltac prepare_corres :=
- intros; autounfold with s3k_unfold.
+Tactic Notation "prepare_corres" constr_list(rl) :=
+ let f := ltac2:(rl' |- iter_unfold (get_constr_list rl')) in
+ f rl; intros; autounfold with s3k_unfold.
 
 Ltac gen_corres := repeat forward_abstract.
 
