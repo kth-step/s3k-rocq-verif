@@ -75,19 +75,7 @@ Definition tsl_table_up (l : list Types_tsl_t) : option tsl_table_t :=
 Definition mon_table_up (l : list Types_mon_t) : option mon_table_t :=
   mon_table ← mapM mon_up l; mret (CapTable mon_table).
 
-(* TODO: complete refinement mappings *)
-(* NOTE: Axiomatize a dummy abstract memory table since the refinement mapping from concrete
-memory table to abstract memory table is not yet defined. *)
-Parameter dummy_mem_table : mem_table_t.
-
-
 (** ** Process control block mappings. *)
-
-(* NOTE: Axiomatize for now the refinement mappings from concrete register list/PMP structure/
-process status flags to their abstract counterparts. *)
-Parameter regs_up : list int64 -> regs_t.
-Parameter pmp_up : Types_pmp_t -> pmp_t.
-Parameter pstate_to_flags : int64 -> (bool * bool).
 
 (** Refinement mapping for a process control block. *)
 Definition proc_up (p : Types_proc_t) : proc_t :=
