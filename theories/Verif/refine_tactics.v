@@ -49,7 +49,6 @@ Create HintDb s3k_arith.
 Hint Unfold Rnat fun_hrel ofun_hrel int64_to_nat nat_to_int64 : s3k_arith.
 Hint Unfold Int64.add Int64.sub I64.of_u64 : s3k_arith.
 Hint Unfold err_success : s3k_arith.
-Hint Rewrite mon_sz_config : s3k_arith.
 Hint Rewrite Int64.repr_unsigned : s3k_arith.
 
 (** ** Tactics *)
@@ -91,6 +90,7 @@ Ltac2 forward_range1 () :=
     assert_if_new (csize $c <= MON_SZ)%nat
   | [ |- context[(cfree ?ci + cfree ?cj)%nat]] =>
       assert_if_new ($ci.(cfree) + $cj.(cfree) <= $ci.(csize))%nat
+  | [ |- _] => extend mon_sz_upper_bound
   end.
 
 Ltac2 Notation "forward_range" :=
