@@ -17,3 +17,4 @@ defn mon_table_size :u64 = max_mon_fuel * max_pid
 defn max_ipc_fuel : u64 = 16ul
 defn ipc_table_size : u64 = max_ipc_fuel
 
+defn max_time_slot : u64 = 32ul

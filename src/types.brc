@@ -1,7 +1,6 @@
 module Types
 
 import Error
-import Config
 
 type word_t = u64
 
@@ -39,6 +38,15 @@ defn ipc_FLAG_IPC : ipc_flag_t = 16u
 defn ipc_FLAG_MASK : ipc_flag_t = 0x1Fu
 
 (* Process control block types *)
+
+(*record regs_t {
+  pc: word_t, ra: word_t, sp: word_t, gp: word_t, tp: word_t,
+  a0: word_t, a1: word_t, a2: word_t, a3: word_t, a4: word_t, a5: word_t, a6: word_t, a7: word_t,
+  t0: word_t, t1: word_t, t2: word_t, t3: word_t, t4: word_t, t5: word_t, t6: word_t,
+  s0: word_t, s1: word_t, s2: word_t, s3: word_t, s4: word_t, s5: word_t, s6: word_t,
+  s7: word_t, s8: word_t, s9: word_t, s10: word_t, s11: word_t,
+  tpc: word_t, tsp: word_t, epc: word_t, esp: word_t,
+}*)
 
 enum reg_t {
   Reg_pc,
@@ -110,7 +118,6 @@ record tsl_t {
   cfree : fuel_t,
   csize : fuel_t,
   hart : hart_t,
-  enabled : bool,
   base : time_slot_t,
   size : time_slot_t,
   free : time_slot_t,
@@ -151,10 +158,13 @@ record frame_t {
   length: u64,
 }
 
+type sched_t = [#[#frame_t; Config::max_time_slot]]
+
 (* Kernel state *)
 
 record kstate {
   procs: #[#proc_t; Config::max_pid],
+  sched: #[#[#frame_t; Config::max_time_slot]; Platform::num_harts],
   tsl_table: #[#tsl_t; Config::tsl_table_size],
   mon_table: #[#mon_t; Config::mon_table_size],
   ipc_table: #[#ipc_t; Config::ipc_table_size],
