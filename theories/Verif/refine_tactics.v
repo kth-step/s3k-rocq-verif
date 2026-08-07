@@ -7,7 +7,7 @@ From S3K.BarocqComp Require Import Option Barray Intop Utils.
 From S3K.BarocqComp Require Import ShallowNotations.
 From S3K.Verif Require Import axioms gen_tactics barocq_aux refine_util refine_map.
 
-(** * Tactics and hints for refinement proofs *)
+(** * Hints and tactics for refinement proofs *)
 
 (** ** Hints *)
 

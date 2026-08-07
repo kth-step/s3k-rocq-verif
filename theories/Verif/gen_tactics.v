@@ -16,7 +16,7 @@ Ltac norm_bool :=
     ?orb_true_iff, ?orb_false_iff,
     ?andb_true_iff, ?andb_false_iff.
 
-(** * CompCert Integer arithmetic related tactics *)
+(** ** CompCert Integer arithmetic related tactics *)
 
 (** Normalize Int64 comparisons into integer comparisons *)
 Local Lemma ltu_true :
@@ -64,7 +64,7 @@ Tactic Notation "norm_cmp" "in" "*" :=
 
 Ltac norm_bool_cmp := norm_bool; norm_cmp.
 
-(** * rep_lia from VST *)
+(** ** rep_lia from VST *)
 
 Ltac Zground X :=
   match X with
@@ -154,7 +154,8 @@ Ltac rep_lia :=
    rep_lia_setup2;
    lia.
 
-(** * Ltac2 utilities *)
+(** ** Ltac2 utilities *)
+
 Module ltac2_tactics.
 
 Import Ltac2 Message.

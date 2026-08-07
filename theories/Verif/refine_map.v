@@ -11,7 +11,9 @@ Import IntopNotations.
 
 Set Implicit Arguments.
 
-(** * General refinement mapping definitions.  *)
+(** * Refinement mapping definitions *)
+
+(** ** General refinement mapping definitions  *)
 
 Definition Rnat : nat -> int64 -> Prop := fun_hrel int64_to_nat.
 
@@ -20,9 +22,9 @@ Ltac rewrite_Rnat :=
   | [ H : Rnat ?ia ?ib |- _ ] => unfold Rnat, fun_hrel in H; rewrite H
   end.
 
-(** * S3K specific refinement mapping definitions. *)
+(** ** S3K specific refinement mapping definitions *)
 
-(** ** Capability mappings. *)
+(** *** Capability mappings *)
 
 (** Refinement mapping from 64-bit integer to abstract process ID. 0UL encodes empty PID. *)
 Definition int64_to_pid (i : int64) : option nat :=
@@ -75,7 +77,7 @@ Definition tsl_table_up (l : list Types_tsl_t) : option tsl_table_t :=
 Definition mon_table_up (l : list Types_mon_t) : option mon_table_t :=
   mon_table ← mapM mon_up l; mret (CapTable mon_table).
 
-(** ** Process control block mappings. *)
+(** *** Process control block mappings *)
 
 (** Refinement mapping for a process control block. *)
 Definition proc_up (p : Types_proc_t) : proc_t :=
@@ -86,7 +88,7 @@ Definition proc_up (p : Types_proc_t) : proc_t :=
 (** Refinement mapping for the process table. *)
 Definition ptable_up := map proc_up.
 
-(** ** Scheduler mappings. *)
+(** *** Scheduler mappings *)
 
 (** Refinement mapping for time frame. *)
 Definition frame_up (f: Types_frame_t) : (option nat * nat) :=
@@ -141,7 +143,7 @@ Definition Rkstate := ofun_hrel kstate_up.
 
 Definition Rkstate_with_err := ofun_hrel kstate_to_kstate_err.
 
-(** * Helper lemmas *)
+(** ** Refinement helper lemmas *)
 
 Create HintDb kstate_unfold.
 Hint Unfold mbind option_bind : kstate_unfold.
@@ -168,9 +170,9 @@ Proof.
   destruct tb.[ib]; [ eauto | congruence ].
 Qed.
 
-(** ** Rksate related. *)
+(** *** Rkstate related lemmas *)
 
-(** Rkstate inversion. *)
+(** Rkstate inversion *)
 
 Section Rkstate.
 
@@ -240,7 +242,7 @@ Proof.
   by rewrite H, H0.
 Qed.
 
-(** ** Monitor table related. *)
+(** *** Monitor table related lemmas *)
 
 (** Table set preserves correspondence. *)
 Lemma Rmon_table_set :
@@ -350,7 +352,7 @@ Qed.
 
 End Length.
 
-(** ** Monitor capability related. *)
+(** *** Monitor capability related lemmas *)
 
 (** Barocq monitor capability corresponds to None if owner and cfree are 0
 and has valid pid. *)
@@ -421,7 +423,7 @@ Proof.
   congruence.
 Qed.
 
-(** ** Rpid_opt related *)
+(** *** Rpid_opt related lemmas *)
 
 (** Rpid_opt is a one-to-one function. *)
 Lemma Rpid_opt_inj ownera ownerb ownera' ownerb':
@@ -439,4 +441,3 @@ Proof.
   - inv H. rep_lia.
   - f_equal. rep_lia.
 Qed.
-

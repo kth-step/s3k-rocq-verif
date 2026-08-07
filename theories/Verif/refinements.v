@@ -5,12 +5,14 @@ From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util config.
 From S3K.Verif Require Import axioms refine_util refine_tactics refine_map bridge.
 
+(** * S3K refinement proofs *)
+
 Section S3KRefine.
 
 Variable ka : kstate_t.
 Variable kb : Types_kstate.
 
-(** * Kernel well-formedness properties *)
+(** ** Kernel well-formedness properties *)
 
 (** Capability size is a constant. *)
 Hypothesis mon_table_size : ctable_size ka.(kmon_tbl) = MON_SZ.
@@ -41,7 +43,7 @@ Hypothesis next_child_range :
 Hypothesis mem_table_correct :
   ka.(kmem_tbl) = dummy_mem_table.
 
-(** * Refinement proofs for capability operations *)
+(** ** Refinement proofs for capability operations *)
 
 Theorem mon_delele_safe_refine :
   forall ownera ownerb ia ib,

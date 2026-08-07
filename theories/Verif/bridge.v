@@ -4,7 +4,7 @@ From compcert Require Import Integers.
 From S3K.ExecSem Require Import kstate cap exec.
 From S3K.Verif Require Import gen_tactics.
 
-(** * Definitions bridging the gap between the concrete and abstract semantics. *)
+(** * Definitions bridging the concrete and abstract semantics *)
 
 (** [exec_mon_revoke'] mimics the in-place update semantics at the concrete level,
 which works better with automated refinement. We prove it is equivalent to [exec_mon_revoke]
@@ -34,7 +34,7 @@ Definition exec_mon_revoke' (kstate : kstate_t) (owner : nat) (i : nat) : option
 
 Section Bridge.
 
-(** * Equivalence proofs. *)
+(** ** Equivalence proofs *)
 
 Variable k : kstate_t.
 
@@ -53,13 +53,12 @@ Proof.
   case_match in H2.
   simpl in H2.
   rewrite list_lookup_insert_ne in H2.
-  - simpl in H1.
-    simplify_eq.
+  - by simpl in H1; simplify_eq.
   - unfold cap_owner_get in H.
     repeat case_match in H; try discriminate.
     simplify_eq.
     apply cfree_gt_0 in Heqo.
-    lia.
+    by lia.
 Qed.
 
 End Bridge.

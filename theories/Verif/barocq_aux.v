@@ -8,7 +8,7 @@ From VST Require Import Zlist.
 
 Set Implicit Arguments.
 
-(** * Barray helper lemmas  *)
+(** * Barocq array helper lemmas  *)
 
 (** Usize integer (architecture specific) to natural number. *)
 Definition usize_to_nat (i : usize) : nat := Z.to_nat (USIZE.to_Z i).
@@ -17,7 +17,8 @@ Section Barray.
 
 Variable A : Type.
 
-(** Barocq list get lemmas. *)
+(** ** Barocq list get lemmas *)
+
 Lemma bget_lookup :
   forall (t : list A) i, t.[i] = t !! (usize_to_nat i).
 Proof.
@@ -43,19 +44,18 @@ Proof.
   unfold get, usize_to_nat, USIZE.to_Z.
   set (z := Intsize.unsigned i) in *.
   assert (0 <= z) by rep_lia.
-  rewrite ZlistPlus.list_nth_z_Some.
-  rewrite <- ZtoNat_Zlength.
-  lia.
+  rewrite ZlistPlus.list_nth_z_Some, <- ZtoNat_Zlength.
+  by lia.
 Qed.
 
-(** Barocq list set lemmas. *)
+(** ** Barocq list set lemmas *)
 
 Lemma valid_index_true_lt (t : list A) i :
   valid_index t i = true <-> (usize_to_nat i < length t)%nat.
 Proof.
   unfold valid_index, Barray.Zlength, usize_to_nat, USIZE.to_Z.
   rewrite <- ZtoNat_Zlength.
-  rep_lia.
+  by rep_lia.
 Qed.
 
 Lemma bset_Some_insert :
@@ -64,7 +64,7 @@ Lemma bset_Some_insert :
   t' = <[ usize_to_nat i := v ]> t.
 Proof.
   intros.
-  unfold set in H; case_match; try discriminate.
+  unfold set in H; case_match; try by discriminate.
   apply valid_index_true_lt in H0.
   inv H.
   rewrite insert_take_drop; last done.
@@ -75,7 +75,7 @@ Proof.
    drop (S (usize_to_nat i)) t). {
     rewrite sublist_skip; last by rep_lia.
     unfold usize_to_nat, USIZE.to_Z.
-    repeat f_equal; rep_lia.
+    by repeat f_equal; rep_lia.
   }
   by rewrite Htake, Hdrop.
 Qed.
@@ -101,7 +101,7 @@ Lemma bset_length_same :
 Proof.
   intros.
   rewrite (bset_Some_insert _ _ _ H).
-  apply length_insert.
+  by apply length_insert.
 Qed.
 
 End Barray.
@@ -117,7 +117,6 @@ Proof.
   unfold usize_to_nat, int64_to_nat, USIZE.to_Z, USIZE.of_u64.
   f_equal.
   apply Ptrofs.unsigned_repr.
-  replace Ptrofs.max_unsigned with Int64.max_unsigned by reflexivity.
-  apply Int64.unsigned_range_2.
+  replace Ptrofs.max_unsigned with Int64.max_unsigned by done.
+  by apply Int64.unsigned_range_2.
 Qed.
-
