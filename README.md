@@ -14,7 +14,7 @@ programming language is a refinement of this specification.
 
 The executable semantics is ported manually from the [s3k-verif](https://github.com/kth-step/s3k-verif) project
 in HOL4, targeting mainly the definitions found in [`src/semantics/execScript.sml`](https://github.com/kth-step/s3k-verif/blob/main/src/semantics/execScript.sml).
-We keep the translation as close as possible and depend only on the [std++](https://gitlab.mpi-sws.org/iris/stdpp) library.
+We keep the translation as close as possible and depend only on the [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp).
 
 ### Implementation (`src/` and `theories/Barocq`)
 
@@ -51,7 +51,27 @@ in progress.
 
 ## Build
 
-To build using opam, run `opam install .`.
+Requirements:
+- [The Rocq Prover](https://rocq-prover.org), version 9.1
+- [Rocq Stdlib](https://github.com/rocq-prover/stdlib), version 9.0.0
+- [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0
+- [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
+- [compcert-ce](https://gitlab.inria.fr/cchavano/compcert-ce.git#barocq-v0.5), tag `barocq-v0.5` (and its dependencies)
+- [VST Zlist](https://github.com/PrincetonUniversity/VST), version 2.13
 
-To build using make, first ensure that you have all dependencies installed, and
-then run `make`. 
+To build the project manually when all dependencies are installed:
+```shell
+make
+```
+
+The [opam](https://opam.ocaml.org) package manager can also be used to install the project and all dependencies,
+assuming the Rocq opam repository has been added:
+```shell
+opam repo add rocq-released https://rocq-prover.org/opam/released
+```
+
+To build and install the project and its dependencies via opam,
+run the following command in the root of the repository:
+```shell
+opam pin add -y -k path .
+```
