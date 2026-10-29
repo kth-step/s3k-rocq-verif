@@ -1,8 +1,8 @@
 From Stdlib Require Import Bool List BinIntDef.
 From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
-From S3K.BarocqComp Require Import Option Barray Intop Utils.
-From S3K.BarocqComp Require Import ShallowNotations.
+From BarocqComp Require Import Option Barray Intop Utils.
+From BarocqComp Require Import ShallowLib.
 
 (** * Type definitions *)
 

@@ -2,7 +2,7 @@ From stdpp Require Import prelude functions countable gmap.
 From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
 From S3K.ExecSem Require Import util.
-From S3K.BarocqComp Require Import Intop.
+From BarocqComp Require Import Intop.
 
 Import IntopNotations.
 
