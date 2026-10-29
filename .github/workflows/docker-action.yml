@@ -24,15 +24,6 @@ jobs:
           custom_image: ${{ matrix.image }}
           custom_script: |
             {{before_install}}
-            startGroup "Build rocq-s3k-barocq-comp dependencies"
-              opam pin add -n -y -k path rocq-s3k-barocq-comp .
-              opam update -y
-              opam install -y -j $(nproc) rocq-s3k-barocq-comp --deps-only
-            endGroup
-            startGroup "Build rocq-s3k-barocq-comp"
-              opam install -y -v -j $(nproc) rocq-s3k-barocq-comp
-              opam list
-            endGroup
             startGroup "Build rocq-s3k-barocq dependencies"
               opam pin add -n -y -k path rocq-s3k-barocq .
               opam update -y
@@ -64,5 +55,4 @@ jobs:
               opam remove -y rocq-s3k-verif
               opam remove -y rocq-s3k-exec-sem
               opam remove -y rocq-s3k-barocq
-              opam remove -y rocq-s3k-barocq-comp
             endGroup

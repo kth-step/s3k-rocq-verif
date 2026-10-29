@@ -4,7 +4,7 @@
 [S3K](https://github.com/kth-step/s3k) is an experimental bare-metal capability-based separation kernel for RISC-V.
 This repository is about specification and verification of S3K using the [Rocq Prover](https://rocq-prover.org).
 In particular, we take as specification the [HOL4 formalization](https://github.com/kth-step/s3k-verif) of the S3K executable
-semantics (ported to Rocq), and verify that an implementation of S3K in the [Barocq](https://gitlab.inria.fr/cchavano/barocq)
+semantics (ported to Rocq), and verify that an implementation of S3K in the [Barocq](https://github.com/cchavano/barocq)
 programming language is a refinement of this specification.
 
 
@@ -56,8 +56,9 @@ Requirements:
 - [Rocq Stdlib](https://github.com/rocq-prover/stdlib), version 9.0.0
 - [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0
 - [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
-- [compcert-ce](https://gitlab.inria.fr/cchavano/compcert-ce.git#barocq-v0.5), tag `barocq-v0.5` (and its dependencies)
+- [compcert-brc](https://github.com/cchavano/compcert-brc.git#barocq-v0.6), tag `barocq-v0.6` (and its dependencies)
 - [VST Zlist](https://github.com/PrincetonUniversity/VST), version 2.13
+- [Barocq's Rocq Library](https://github.com/cchavano/barocq), package `rocq-barocq-lib`
 
 To build the project manually when all dependencies are installed:
 ```shell
