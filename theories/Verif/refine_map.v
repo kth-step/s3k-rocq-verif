@@ -3,8 +3,8 @@ From compcert Require Import Integers.
 From RecordUpdate Require Import RecordUpdate.
 From S3K.Barocq Require Import S3K_ShallowR.
 From S3K.ExecSem Require Import kstate cap ctx exec util proc sched config.
-From S3K.BarocqComp Require Import Option Barray Intop Utils.
-From S3K.BarocqComp Require Import ShallowNotations.
+From BarocqComp Require Import Option Barray Intop Utils.
+From BarocqComp Require Import ShallowLib.
 From S3K.Verif Require Import barocq_aux axioms gen_tactics refine_util.
 
 Import IntopNotations.
@@ -285,7 +285,7 @@ Proof.
   case_match; try discriminate.
   inv H.
   apply mapM_Some in H2.
-  pose proof Forall2_length _ _ _ H2.
+  pose proof @Forall2_length _ _ _ _ _ H2.
   pose proof lookup_lt_Some _ _ _ H1.
   rewrite bget_lookup.
   rewrite int64_to_usize_to_nat_same.

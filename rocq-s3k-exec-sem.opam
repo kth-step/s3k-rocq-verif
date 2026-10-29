@@ -20,8 +20,8 @@ depends: [
   "rocq-stdlib"
   "rocq-stdpp" {>= "1.13.0"}
   "coq-record-update" {= "0.3.6"}
-  "compcert-ce" {= "3.17-20260508ce"}
-  "rocq-s3k-barocq-comp" {= "dev"}
+  "compcert-brc" {= "3.17-brc1"}
+  "rocq-barocq-lib" {= "dev"}
 ]
 
 tags: [
@@ -35,4 +35,7 @@ authors: [
   "Henrik Karlsson"
 ]
 
-pin-depends: ["compcert-ce.3.17-20260508ce" "git+https://gitlab.inria.fr/cchavano/compcert-ce.git#barocq-v0.5"]
+pin-depends: [
+ ["rocq-barocq-lib.dev" "git+https://github.com/cchavano/barocq#main"]   
+ ["compcert-brc.3.17-brc1" "git+https://github.com/cchavano/CompCert-Brc#barocq-v0.6"]
+]

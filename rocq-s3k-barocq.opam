@@ -19,7 +19,8 @@ depends: [
   "rocq-core" {>= "9.0" & < "9.3"}
   "rocq-stdlib"
   "coq-record-update" {= "0.3.6"}
-  "rocq-s3k-barocq-comp" {= "dev"}
+  "compcert-brc" {= "3.17-brc1"}
+  "rocq-barocq-lib" {= "dev"}
 ]
 
 tags: [
@@ -30,4 +31,9 @@ tags: [
 ]
 authors: [
   "Hanwen Gu"
+]
+
+pin-depends: [
+ ["rocq-barocq-lib.dev" "git+https://github.com/cchavano/barocq#main"]   
+ ["compcert-brc.3.17-brc1" "git+https://github.com/cchavano/CompCert-Brc#barocq-v0.6"]
 ]

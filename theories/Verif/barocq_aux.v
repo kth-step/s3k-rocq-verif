@@ -1,12 +1,14 @@
 From stdpp Require Import prelude.
 From compcert Require Import Integers.
 From S3K.ExecSem Require Import util.
-From S3K.BarocqComp Require Import Intop Barray.
-From S3K.BarocqComp Require Import ShallowNotations.
+From BarocqComp Require Import Intop Barray.
+From BarocqComp Require Import ShallowLib.
 From S3K.Verif Require Import gen_tactics.
 From VST Require Import Zlist.
 
 Set Implicit Arguments.
+
+Open Scope Z_scope.
 
 (** * Barocq array helper lemmas  *)
 
