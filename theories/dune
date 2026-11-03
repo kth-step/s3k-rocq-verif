@@ -1,0 +1,5 @@
+(rocq.theory
+ (name S3K)
+ (theories Ltac2 Stdlib stdpp RecordUpdate VST.zlist Flocq compcert BarocqComp))
+
+(include_subdirs qualified)

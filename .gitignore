@@ -35,6 +35,7 @@ nra.cache
 native_compute_profile_*.data
 Makefile.rocq
 Makefile.rocq.conf
+_build
 
 # generated timing files
 *.timing.diff
