@@ -61,10 +61,10 @@ Export ltac2_tactics.
 (** Normalize length expressions into configured number. *)
 Ltac2 norm_length1 () :=
   match! goal with
-  | [h : ?tb.[?i <- ?v] = Some ?tb' |- context[length ?tb'] ] =>
+  | [h : ?tb.[?i <- ?v] = Some ?_tb' |- context[length ?_tb'] ] =>
     (* Barocq set doesn't change length. *)
     let h := Control.hyp h in rewrite (bset_length_same $tb $i $v $h)
-  | [h : Rmon_table (CapTable ?ta) ?tb |- context[length ?tb]] =>
+  | [h : Rmon_table (CapTable _) ?_tb |- context[length ?_tb]] =>
     (* Normalize concrete table size into abstract table size. *)
     let h := Control.hyp h in
     rewrite <- (Rmon_table_len_same $h)
@@ -80,7 +80,7 @@ Ltac2 Notation "norm_length" := repeat (norm_length1 ()).
 (** Introduce range constraints for variables involved in goal. *)
 Ltac2 forward_range1 () :=
   match! goal with
-  | [ h : ?l !! ?ia = Some _ |- context[?ia]] =>
+  | [ h : _ !! ?_ia = Some _ |- context[?_ia]] =>
     (* Range for valid index *)
     let h := Control.hyp h in
     extend (lookup_lt_Some _ _ _ $h)
@@ -104,8 +104,8 @@ Ltac2 solve_corres () :=
 (** Derive finer correspondence results from the hypotheses. *)
 Ltac2 forward_hyp_corres1 () :=
   match! goal with
-  | [ h1 : Rpid_opt ?ova ?vb,
-      h2 : Rpid_opt ?ova' ?vb' |- context[?vb] ] =>
+  | [ h1 : Rpid_opt _ ?_vb,
+      h2 : Rpid_opt _ _ |- context[?_vb] ] =>
       let h1 := Control.hyp h1 in
       let h2 := Control.hyp h2 in
       rewrite (Rpid_opt_inj $h1 $h2) in *
@@ -146,8 +146,8 @@ Ltac2 forward_abstract_opt_cap (t : constr) :=
   destruct $t eqn:? >
   [ (* Some case, introduce capability field correspondence.results. *)
     match! goal with
-    | [ hget : ?tlookup = Some ?va,
-        h : Rmon (Some ?va) ?vb |- _ ] =>
+    | [ _hget : ?tlookup = Some ?_va,
+        h : Rmon (Some ?_va) _ |- _ ] =>
       Control.assert_true (Constr.equal t tlookup);
       let h := Control.hyp h in
       let h' := @HRmon_corres in
@@ -184,9 +184,9 @@ Ltac2 forward_abstract_lookup_None (h : constr) :=
     auto with s3k_inv
   | [ |- _] =>
     (* Otherwise abstract model handles the lookup error, simplify in concrete. *)
-    lazy_match! (Constr.type h) with ?ta !! ?ia = None =>
+    lazy_match! (Constr.type h) with _ !! ?ia = None =>
       match! goal with
-      | [ |- context[?tb.[USIZE.of_u64 ?ib]]] =>
+      | [ |- context[_.[USIZE.of_u64 ?ib]]] =>
         let hi := get_or_solve_corres '(Rnat $ia $ib) in
         trivial_erewrite ?(mon_lookup_None_len _ _ $h $hi); simpl
       | [ |- _] => fail_with_msg "Found no correspondence for abstract lookup in concrete model."
@@ -281,7 +281,7 @@ Ltac2 forward_abstract () :=
         | cap_table_t _  => destruct $t eqn:?; debug_printf "Getting rid of CapTable"
         end |
         lazy_match! t with
-        |  ?l !! ?ia =>
+        |  _ !! _ =>
           (* Destruct result of abstract lookup *)
             let h := Fresh.in_goal @Hlookup in
             debug_printf "Case analysis on capability table lookup";
