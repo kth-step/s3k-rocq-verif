@@ -14,7 +14,8 @@ programming language is a refinement of this specification.
 
 The executable semantics is ported manually from the [s3k-verif](https://github.com/kth-step/s3k-verif) project
 in HOL4, targeting mainly the definitions found in [`src/semantics/execScript.sml`](https://github.com/kth-step/s3k-verif/blob/main/src/semantics/execScript.sml).
-We keep the translation as close as possible and depend only on the [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp).
+We keep the translation as close as possible and depend mainly on the [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp)
+(with some machine integer definitions from CompCert and Barocq's Rocq library).
 
 ### Implementation (`src/` and `theories/Barocq`)
 
@@ -26,7 +27,7 @@ additional C sources that are currently not included in this repository.
 
 The target of our verification is the Barocq program's shallow embedding inside Rocq (`theories/Barocq/S3K_ShallowR.v`),
 automatically generated from source code by the Barocq compiler.
-We bundle the Barocq-semantics related dependency in `theories/BarocqComp`.
+The shallow embedding depends on Barocq's Rocq library (opam package `rocq-barocq-lib`).
 
 ### Verification (`theories/Verif`)
 
@@ -52,13 +53,17 @@ in progress.
 ## Build
 
 Requirements:
-- [The Rocq Prover](https://rocq-prover.org), version 9.1
-- [Rocq Stdlib](https://github.com/rocq-prover/stdlib), version 9.0.0
-- [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0
+- [The Rocq Prover](https://rocq-prover.org), version 9.0 or 9.1
+- [Rocq Stdlib](https://github.com/rocq-prover/stdlib)
+- [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0 or later
 - [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
-- [compcert-brc](https://github.com/cchavano/compcert-brc.git#barocq-v0.6), tag `barocq-v0.6` (and its dependencies)
+- [compcert-brc](https://github.com/cchavano/CompCert-Brc/tree/barocq-v0.6), tag `barocq-v0.6` (and its dependencies)
 - [VST Zlist](https://github.com/PrincetonUniversity/VST), version 2.13
 - [Barocq's Rocq Library](https://github.com/cchavano/barocq), package `rocq-barocq-lib`
+
+The `.opam` files in the repository root are the authoritative specification of dependencies and versions.
+The project is split into three opam packages: `rocq-s3k-exec-sem` (`theories/ExecSem`),
+`rocq-s3k-barocq` (`theories/Barocq`) and `rocq-s3k-verif` (`theories/Verif`).
 
 To build the project manually when all dependencies are installed:
 ```shell
@@ -71,7 +76,7 @@ assuming the Rocq opam repository has been added:
 opam repo add rocq-released https://rocq-prover.org/opam/released
 ```
 
-To build and install the project and its dependencies via opam,
+To build and install all three packages and their dependencies via opam,
 run the following command in the root of the repository:
 ```shell
 opam pin add -y -k path .
