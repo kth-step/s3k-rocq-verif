@@ -19,7 +19,7 @@ depends: [
   "rocq-core" {>= "9.0" & < "9.2~"}
   "rocq-stdlib"
   "coq-vst-zlist" {= "2.13"}
-  "compcert-brc" {= "3.17-brc1"}
+  "compcert-brc" {= "3.18-brc1"}
   "rocq-barocq-lib" {= "dev"}
   "rocq-s3k-barocq" {= "dev"}
   "rocq-s3k-exec-sem" {= "dev"}
@@ -37,5 +37,5 @@ authors: [
 
 pin-depends: [
  ["rocq-barocq-lib.dev" "git+https://github.com/cchavano/barocq#main"]   
- ["compcert-brc.3.17-brc1" "git+https://github.com/cchavano/CompCert-Brc#barocq-v0.6"]
+ ["compcert-brc.3.18-brc1" "git+https://github.com/cchavano/CompCert-Brc#barocq-v0.7"]
 ]
