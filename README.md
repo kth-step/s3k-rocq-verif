@@ -1,12 +1,12 @@
-# Specification and verification of S3K using the Rocq Prover
+# Specification and verification of S3K using Rocq
+
 [![Docker CI](https://github.com/kth-step/s3k-rocq-verif/actions/workflows/docker-action.yml/badge.svg)](https://github.com/kth-step/s3k-rocq-verif/actions/workflows/docker-action.yml)
 
 [S3K](https://github.com/kth-step/s3k) is an experimental bare-metal capability-based separation kernel for RISC-V.
 This repository is about specification and verification of S3K using the [Rocq Prover](https://rocq-prover.org).
 In particular, we take as specification the [HOL4 formalization](https://github.com/kth-step/s3k-verif) of the S3K executable
-semantics (ported to Rocq), and verify that an implementation of S3K in the [Barocq](https://github.com/cchavano/barocq)
+semantics ported to Rocq, and verify that an implementation of S3K in the [Barocq](https://github.com/cchavano/barocq)
 programming language is a refinement of this specification.
-
 
 ## Project Structure
 
@@ -57,9 +57,9 @@ Requirements:
 - [Rocq Stdlib](https://github.com/rocq-prover/stdlib)
 - [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0 or later
 - [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
-- [compcert-brc](https://github.com/cchavano/CompCert-Brc/tree/barocq-v0.6), tag `barocq-v0.6` (and its dependencies)
+- [compcert-brc](https://github.com/cchavano/CompCert-Brc/tree/barocq-v0.7), tag `barocq-v0.7` (and its dependencies)
 - [VST Zlist](https://github.com/PrincetonUniversity/VST), version 2.13
-- [Barocq's Rocq Library](https://github.com/cchavano/barocq), package `rocq-barocq-lib`
+- [Barocq's Rocq Library](https://github.com/cchavano/barocq/tree/v0.7.0), tag `v0.7.0`, package `rocq-barocq-lib`
 
 The `.opam` files in the repository root are the authoritative specification of dependencies and versions.
 The project is split into three opam packages: `rocq-s3k-exec-sem` (`theories/ExecSem`),
