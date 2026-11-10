@@ -37,7 +37,6 @@ Solve All Obligations with by intros [].
 #[export] Instance reg_t_eq_dec : EqDecision reg_t.
 Proof. solve_decision. Defined.
 
-(** Register indices, following the saved-context order *)
 Definition reg_t2num (reg : reg_t) : nat :=
   match reg with
   | REG_PC => 0 | REG_RA => 1 | REG_SP => 2 | REG_GP => 3 | REG_TP => 4
@@ -83,7 +82,6 @@ Definition reg_s9 := reg_t2num REG_S9.
 Definition reg_s10 := reg_t2num REG_S10.
 Definition reg_s11 := reg_t2num REG_S11.
 
-(** System call arguments *)
 Record args_t := mk_args_t {
   args_a0 : int64;
   args_a1 : int64;
@@ -127,7 +125,6 @@ Definition pmpconf_zero : pmpconf_t :=
 Definition pmpconf_view (conf : pmpconf_t) : option pmpconf_t :=
   if decide (conf.(wpmp_conf) = Byte.zero) then None else Some conf.
 
-(** State mask 1 marks hart ownership; mask 2 prevents future scheduling. *)
 Record proc_t := mk_proc_t {
   pregs : regs_t;
   ppmp : pmp_t;
@@ -254,7 +251,6 @@ Definition ptable_pmp_try_clear (p_opt : option nat) (reg_opt : option pmpreg_t)
       end
   end.
 
-(** The low three bits encode read, write, and execute respectively. *)
 Definition rwx_decode (rwx : byte) : gset perm_t :=
   (if Byte.eq (rwx &₈  Byte.one) Byte.one then {[ PERM_READ ]} else ∅ ) ∪
   (if Byte.eq (rwx &₈  Byte.repr 2) (Byte.repr 2) then {[ PERM_WRITE ]} else ∅ ) ∪
@@ -265,11 +261,8 @@ Definition rwx_encode (perm : gset perm_t) : byte :=
   (if decide (PERM_WRITE ∈ perm) then Byte.repr 2 else Byte.zero) |₈
   (if decide (PERM_EXEC ∈ perm) then Byte.repr 4 else Byte.zero).
 
-(** Syscall ABI: permissions occupy bits 63-56 and the PMP address occupies
-    bits 55-0. Reserved permission bits are normalized to zero. *)
 Definition pmpconf_unpack (raw : int64) : pmpconf_t :=
-  (* 24 = 0x18 *)
-  {| wpmp_conf := Byte.repr 24 |₈ (int64_to_byte (raw >>u₆₄ Int64.repr 56) &₈ Byte.repr 7);
+  {| wpmp_conf := Byte.repr 0x18 |₈ (int64_to_byte (raw >>u₆₄ Int64.repr 56) &₈ Byte.repr 7);
      wpmp_addr := (raw <<₆₄ Int64.repr 8) >>u₆₄ Int64.repr 8 |}.
 
 Definition pmpconf_pack (conf : pmpconf_t) : int64 :=
@@ -280,14 +273,11 @@ Definition pmp_addr_decode (addr : int64) : int64 * int64 :=
   (((addr +₆₄ 1UL) &₆₄ addr) <<₆₄ 2UL,
    (((addr +₆₄ 1UL) ^₆₄ addr) +₆₄ 1UL) <<₆₄ 2UL).
 
-(** Decode a RISC-V naturally aligned power-of-two PMP address into a
-    permission set and a half-open byte range represented by base and size. *)
 Definition pmp_decode (conf : pmpconf_t) : gset perm_t * nat * nat :=
   let perm := rwx_decode conf.(wpmp_conf) in
   let '(base, size) := pmp_addr_decode conf.(wpmp_addr) in
   (perm, int64_to_nat base, int64_to_nat size).
 
-(** PMP syscall indices map directly to the eight modeled hardware slots. *)
 Definition word2pmpreg (x : int64) : option pmpreg_t :=
   if decide (int64_to_nat x < PMP_CNT) then Some (num2pmpreg_t (int64_to_nat x))
   else None.

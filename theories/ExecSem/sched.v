@@ -2,10 +2,8 @@ From stdpp Require Import prelude.
 
 (** * Scheduler definitions *)
 
-(** Scheduler data structure per hart *)
 Inductive hsched_t := HSched : list (option nat * nat) -> hsched_t.
 
-(** Scheduler datatype *)
 Definition sched_t := list hsched_t.
 
 Definition hsched_size (h : hsched_t) : nat :=

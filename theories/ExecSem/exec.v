@@ -10,9 +10,6 @@ Import IntopNotations.
 
 (** ** Error code definitions *)
 
-(** Syscall status values use zero/nonnegative words for success payloads and
-    two's-complement negative words for modeled failures. *)
-
 Definition err_success (n : nat) : int64 :=
   nat_to_int64 n.
 
@@ -31,9 +28,6 @@ Definition err_invalid_state : int64 :=
 Definition cap_header_pack (owner free size : int64) : int64 :=
   owner |₆₄ (free <<₆₄ Int64.repr 16) |₆₄ (size <<₆₄ Int64.repr 32).
 
-(** Executable operations are partial only when a referenced table index is
-    absent or inconsistent. Authorization failures return an [err_*] value. *)
-
 Definition exec_release (ks : kernel_t) (owner : nat) : option kernel_t :=
   match ptable_busy_upd owner false ks.(kptable) with
   | None => None
@@ -42,8 +36,6 @@ Definition exec_release (ks : kernel_t) (owner : nat) : option kernel_t :=
 
 (** ** Monitor operations *)
 
-(** Introspection packs owner, free extent, total extent, and monitor pid into
-    four 16-bit fields. Owner zero means unowned; process ids are one-based. *)
 Definition exec_mon_introspect (ks : kernel_t) (owner i j : nat)
   : option (int64 * int64) :=
   match cap_owner_get ks.(kmon_tbl) owner i with
@@ -127,8 +119,6 @@ Definition exec_mon_delete (ks : kernel_t) (owner i : nat) : kernel_t * int64 :=
 
 (** ** Time slice operations *)
 
-(** The first word describes capability metadata and hart; the second describes
-    the base, free length, and total length of the inspected time slice. *)
 Definition exec_tsl_introspect (ks : kernel_t) (owner i j : nat)
   : option (int64 * int64 * int64) :=
   match cap_owner_get ks.(ktsl_tbl) owner i with
@@ -249,7 +239,6 @@ Definition exec_tsl_delete (ks : kernel_t) (owner i : nat) : kernel_t * int64 :=
 
 (** ** Memory operations *)
 
-(** Base and size occupy separate words to preserve the full address range. *)
 Definition exec_mem_introspect (ks : kernel_t) (owner i j : nat)
   : option (int64 * int64 * int64 * int64) :=
   match cap_owner_get ks.(kmem_tbl) owner i with
@@ -452,7 +441,6 @@ Definition exec_mon_reg_set (ks : kernel_t) (p i reg : nat) (value : int64)
       end
   end.
 
-(** Trap entry snapshots the live hart registers into the calling process. *)
 Definition exec_trap_entry (ks : kernel_t) (p : nat) (regs : regs_t)
   : option kernel_t :=
   if decide (length regs ≠ REG_CNT) then None else
@@ -463,8 +451,6 @@ Definition exec_trap_entry (ks : kernel_t) (p : nat) (regs : regs_t)
 
 (** ** System calls *)
 
-(** Skip the ecall, apply return-register updates, and select the next process.
-    The boolean result tells the system semantics whether to reload PMP state. *)
 Definition exec_syscall_retl (ks : kernel_t) (p : nat) (p_opt : option nat)
   (b : bool) (upd : regs_t -> regs_t) : option (kernel_t * option nat * bool) :=
   match ptable_get p ks.(kptable) with
@@ -510,7 +496,6 @@ Definition exec_syscall_pid_get (ks : kernel_t) (p : nat)
   : option (kernel_t * option nat * bool) :=
   exec_syscall_ret1 ks p false (err_success (S p)).
 
-(** Reloads the hart pmp from the caller's entry in the kernel process table. *)
 Definition exec_syscall_sync (ks : kernel_t) (p : nat)
   : option (kernel_t * option nat * bool) :=
   exec_syscall_ret1 ks p true (err_success 0).
@@ -777,7 +762,6 @@ Definition exec_syscall_decode (syscall_nr : int64) : systemcall_enum :=
   | _ => SYSCALL_INVALID
   end.
 
-(** Decode A7 and pass raw argument-register words to the selected sub-handler. *)
 Definition exec_syscall_handler (ks : kernel_t) (p : nat)
   : option (kernel_t * option nat * bool) :=
   match ptable_get p ks.(kptable) with
@@ -844,8 +828,6 @@ Definition exec_syscall_handler (ks : kernel_t) (p : nat)
 
 (** ** Scheduler *)
 
-(** [t] is measured in abstract schedule slots. The result time is the first
-    slot after the selected run, or the next slot for an explicit idle entry. *)
 Definition exec_sched (ks : kernel_t) (h t : nat)
   : option (kernel_t * option nat * nat) :=
   let tslot := t `mod` TSLOT_CNT in
