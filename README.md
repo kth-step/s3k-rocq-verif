@@ -59,7 +59,7 @@ Requirements:
 - [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
 - [compcert-brc](https://github.com/cchavano/CompCert-Brc/tree/barocq-v0.7), tag `barocq-v0.7` (and its dependencies)
 - [VST Zlist](https://github.com/PrincetonUniversity/VST), version 2.13
-- [Barocq's Rocq Library](https://github.com/cchavano/barocq/tree/v0.7.0), tag `v0.7.0`, package `rocq-barocq-lib`
+- [Barocq's Rocq Library](https://github.com/cchavano/barocq/tree/v0.7.1), tag `v0.7.1`, package `rocq-barocq-lib`
 
 The `.opam` files in the repository root are the authoritative specification of dependencies and versions.
 The project is split into three opam packages: `rocq-s3k-exec-sem` (`theories/ExecSem`),
