@@ -53,7 +53,7 @@ in progress.
 ## Build
 
 Requirements:
-- [The Rocq Prover](https://rocq-prover.org), version 9.0 or 9.1
+- [The Rocq Prover](https://rocq-prover.org), version 9.0, 9.1, or 9.2
 - [Rocq Stdlib](https://github.com/rocq-prover/stdlib)
 - [Std++ library](https://gitlab.mpi-sws.org/iris/stdpp), version 1.13.0 or later
 - [Record Update](https://github.com/tchajed/coq-record-update), version 0.3.6
