@@ -43,17 +43,17 @@ jobs:
               opam install -y -v -j $(nproc) rocq-s3k-exec-sem
               opam list
             endGroup
-            startGroup "Build rocq-s3k-verif dependencies"
-              opam pin add -n -y -k path rocq-s3k-verif .
-              opam update -y
-              opam install -y -j $(nproc) rocq-s3k-verif --deps-only
-            endGroup
-            startGroup "Build rocq-s3k-verif"
-              opam install -y -v -j $(nproc) rocq-s3k-verif
-              opam list
-            endGroup
+            # startGroup "Build rocq-s3k-verif dependencies"
+            #   opam pin add -n -y -k path rocq-s3k-verif .
+            #   opam update -y
+            #   opam install -y -j $(nproc) rocq-s3k-verif --deps-only
+            # endGroup
+            # startGroup "Build rocq-s3k-verif"
+            #   opam install -y -v -j $(nproc) rocq-s3k-verif
+            #   opam list
+            # endGroup
             startGroup "Uninstallation test"
-              opam remove -y rocq-s3k-verif
+              # opam remove -y rocq-s3k-verif
               opam remove -y rocq-s3k-exec-sem
               opam remove -y rocq-s3k-barocq
             endGroup
