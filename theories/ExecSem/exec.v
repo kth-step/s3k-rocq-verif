@@ -26,7 +26,7 @@ Definition err_invalid_state : int64 :=
   Int64.repr (-4).
 
 Definition cap_header_pack (owner free size : int64) : int64 :=
-  owner |₆₄ (free <<₆₄ Int64.repr 16) |₆₄ (size <<₆₄ Int64.repr 32).
+  owner |₆₄ (free <<₆₄ 16UL) |₆₄ (size <<₆₄ 32UL).
 
 Definition exec_release (ks : kernel_t) (owner : nat) : option kernel_t :=
   match ptable_busy_upd owner false ks.(kptable) with
@@ -50,7 +50,7 @@ Definition exec_mon_introspect (ks : kernel_t) (owner i j : nat)
                           | None => Int64.zero
                           | Some v => nat_to_int64 (S v)
                           end in
-            let wpid := nat_to_int64 (S cj.(cdata).(mpid)) <<₆₄ Int64.repr 48 in
+            let wpid := nat_to_int64 (S cj.(cdata).(mpid)) <<₆₄ 48UL in
             let raw := cap_header_pack wowner (nat_to_int64 cj.(cfree))
                          (nat_to_int64 cj.(csize)) |₆₄ wpid in
             Some (err_success 0, raw)
@@ -133,12 +133,12 @@ Definition exec_tsl_introspect (ks : kernel_t) (owner i j : nat)
                            | None => Int64.zero
                            | Some v => nat_to_int64 (S v)
                            end in
-            let wthart := nat_to_int64 cj.(cdata).(thart) <<₆₄ Int64.repr 48 in
+            let wthart := nat_to_int64 cj.(cdata).(thart) <<₆₄ 48UL in
             let raw0 := cap_header_pack wcowner (nat_to_int64 cj.(cfree))
                           (nat_to_int64 cj.(csize)) |₆₄ wthart in
             let wtbase := nat_to_int64 cj.(cdata).(tbase) in
-            let wtfree := nat_to_int64 cj.(cdata).(tfree) <<₆₄ Int64.repr 16 in
-            let wtsize := nat_to_int64 cj.(cdata).(tsize) <<₆₄ Int64.repr 32 in
+            let wtfree := nat_to_int64 cj.(cdata).(tfree) <<₆₄ 16UL in
+            let wtsize := nat_to_int64 cj.(cdata).(tsize) <<₆₄ 32UL in
             let raw1 := wtbase |₆₄ wtfree |₆₄ wtsize in
             Some (err_success 0, raw0, raw1)
         end
@@ -253,7 +253,7 @@ Definition exec_mem_introspect (ks : kernel_t) (owner i j : nat)
                            | None => Int64.zero
                            | Some v => nat_to_int64 (S v)
                            end in
-            let wmperm := byte_to_int64 (rwx_encode cj.(cdata).(mperm)) <<₆₄ Int64.repr 48 in
+            let wmperm := byte_to_int64 (rwx_encode cj.(cdata).(mperm)) <<₆₄ 48UL in
             let raw0 := cap_header_pack wcowner (nat_to_int64 cj.(cfree))
                           (nat_to_int64 cj.(csize)) |₆₄ wmperm in
             let wmbase := nat_to_int64 cj.(cdata).(mbase) in
@@ -460,7 +460,7 @@ Definition exec_syscall_retl (ks : kernel_t) (p : nat) (p_opt : option nat)
       then None
       else
         let ptbl := ptable_set p
-              (proc <| pregs := (<[ reg_pc := (proc.(pregs) !!! reg_pc) +₆₄ Int64.repr 4 ]>
+              (proc <| pregs := (<[ reg_pc := (proc.(pregs) !!! reg_pc) +₆₄ 4UL ]>
                                    (upd proc.(pregs))) |>)
               ks.(kptable) in
         Some (ks <| kptable := ptbl |>, p_opt, b)

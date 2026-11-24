@@ -163,7 +163,7 @@ Definition proc_pmp_get (proc : proc_t) (pmpreg : pmpreg_t) : option pmpconf_t :
   (proc.(ppmp) !! pmpreg_t2num pmpreg) ≫= pmpconf_view.
 
 Definition proc_suspend_get (proc : proc_t) : bool :=
-  bool_decide (proc.(pstate) &₆₄ Int64.repr 2 ≠ Int64.zero).
+  bool_decide (proc.(pstate) &₆₄ 2UL ≠ Int64.zero).
 
 Definition proc_busy_get (proc : proc_t) : bool :=
   bool_decide (proc.(pstate) &₆₄ Int64.one ≠ Int64.zero).
@@ -209,8 +209,8 @@ Definition proc_busy_set (b : bool) (proc : proc_t) : proc_t :=
                      |₆₄ (if b then Int64.one else Int64.zero)) |>.
 
 Definition proc_suspend_set (b : bool) (proc : proc_t) : proc_t :=
-  proc <| pstate := ((proc.(pstate) &₆₄ Int64.not (Int64.repr 2))
-                     |₆₄ (if b then Int64.repr 2 else Int64.zero)) |>.
+  proc <| pstate := ((proc.(pstate) &₆₄ Int64.not 2UL)
+                     |₆₄ (if b then 2UL else Int64.zero)) |>.
 
 Definition ptable_reg_upd (p : nat) (reg : nat) (val : int64) (ptbl : ptable_t)
   : option ptable_t :=
@@ -262,12 +262,12 @@ Definition rwx_encode (perm : gset perm_t) : byte :=
   (if decide (PERM_EXEC ∈ perm) then Byte.repr 4 else Byte.zero).
 
 Definition pmpconf_unpack (raw : int64) : pmpconf_t :=
-  {| wpmp_conf := Byte.repr 0x18 |₈ (int64_to_byte (raw >>u₆₄ Int64.repr 56) &₈ Byte.repr 7);
-     wpmp_addr := (raw <<₆₄ Int64.repr 8) >>u₆₄ Int64.repr 8 |}.
+  {| wpmp_conf := Byte.repr 0x18 |₈ (int64_to_byte (raw >>u₆₄ 56UL) &₈ Byte.repr 7);
+     wpmp_addr := (raw <<₆₄ 8UL) >>u₆₄ 8UL |}.
 
 Definition pmpconf_pack (conf : pmpconf_t) : int64 :=
-  (byte_to_int64 (conf.(wpmp_conf) &₈ Byte.repr 7) <<₆₄ Int64.repr 56) |₆₄
-  ((conf.(wpmp_addr) <<₆₄ Int64.repr 8) >>u₆₄ Int64.repr 8).
+  (byte_to_int64 (conf.(wpmp_conf) &₈ Byte.repr 7) <<₆₄ 56UL) |₆₄
+  ((conf.(wpmp_addr) <<₆₄ 8UL) >>u₆₄ 8UL).
 
 Definition pmp_addr_decode (addr : int64) : int64 * int64 :=
   (((addr +₆₄ 1UL) &₆₄ addr) <<₆₄ 2UL,
