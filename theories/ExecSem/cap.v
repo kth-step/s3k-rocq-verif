@@ -18,36 +18,26 @@ Record cap_t := mk_cap_t {
   cdata : A;
 }.
 
-(** Capability table *)
-Inductive cap_table_t := CapTable (l : list (option cap_t)).
+Definition cap_table_t := list (option cap_t).
 
-Definition cap_get (ct : cap_table_t) (i : nat) : option cap_t :=
-  match ct with CapTable l =>
-    match l !! i with
-    | None => None
-    | Some v => v
-    end
-  end.
+Definition cap_get (l : cap_table_t) (i : nat) : option (option cap_t) :=
+  l !! i.
 
 Definition cap_owner_get (τ : cap_table_t) (p : nat) (i : nat) : option cap_t :=
   match cap_get τ i with
   | None => None
-  | Some v => if decide (v.(cowner) = Some p) then Some v else None
+  | Some None => None
+  | Some (Some ci) => if decide (ci.(cowner) = Some p) then Some ci else None
   end.
 
-Definition cap_idx_valid (ct : cap_table_t) (i : nat) : bool :=
-  match ct with CapTable l =>
-    match l !! i with
-    | None => false
-    | Some v => true
-    end
-  end.
+Definition cap_set (l : cap_table_t) '(i, v) : cap_table_t :=
+  <[ i := v ]> l.
 
-Definition cap_set (ct : cap_table_t) '(i, v)  : cap_table_t :=
-  match ct with CapTable l => CapTable (<[ i := v ]> l) end.
+Definition ctable_size (l : cap_table_t) : nat :=
+  length l.
 
-Definition ctable_size (ct : cap_table_t) : nat :=
-  match ct with CapTable l => length l end.
+Definition cap_upd (τ : cap_table_t) '(i, v) : option cap_table_t :=
+  if decide (i < ctable_size τ) then Some (cap_set τ (i, v)) else None.
 
 End Cap.
 
@@ -58,6 +48,13 @@ Record mon_t := mk_mon_t {
 }.
 
 Definition mon_table_t := cap_table_t mon_t.
+
+Definition mon_get (τ : mon_table_t) (i : nat) : option nat :=
+  match cap_get τ i with
+  | None => None
+  | Some None => None
+  | Some (Some ci) => Some ci.(cdata).(mpid)
+  end.
 
 (** ** Time slice table *)
 
@@ -81,3 +78,9 @@ Record mem_t := mk_mem_t {
 
 Definition mem_table_t := cap_table_t mem_t.
 
+Definition mem_mslot (τ : mem_table_t) (i : nat) : option pmpreg_t :=
+  match cap_get τ i with
+  | None => None
+  | Some None => None
+  | Some (Some c) => c.(cdata).(mslot)
+  end.

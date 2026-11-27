@@ -3,7 +3,7 @@ From S3K.ExecSem Require Import cap proc sched.
 
 (** * Core kernel state definitions *)
 
-Record kstate_t := mk_kstate_t {
+Record kernel_t := mk_kernel_t {
   kptable : ptable_t;
   ktsl_tbl : tsl_table_t;
   kmon_tbl : mon_table_t;

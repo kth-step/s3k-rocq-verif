@@ -5,10 +5,9 @@ theories/Barocq/S3K_ShallowR.v
 theories/ExecSem/util.v
 theories/ExecSem/config.v
 theories/ExecSem/cap.v
-theories/ExecSem/ctx.v
 theories/ExecSem/proc.v
 theories/ExecSem/sched.v
-theories/ExecSem/kstate.v
+theories/ExecSem/kernel.v
 theories/ExecSem/exec.v
 
 theories/Verif/axioms.v
