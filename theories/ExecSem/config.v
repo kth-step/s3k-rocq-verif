@@ -18,9 +18,9 @@ Parameter WCET_SCHED : nat.
 Parameter PADDING : nat.
 Parameter SLOT_LEN : nat.
 
-(** HOL4's [new_specification] [kernel_config], stated as a single axiom.
-    The bounds are written [Z.to_nat _] since Rocq would parse large [nat]
-    literals as an [Nat.of_num_uint] of their decimal digits. *)
+(** Kernel configuration axiomatized properties.
+      The bounds are written [Z.to_nat _] since Rocq would parse large [nat]
+       literals as an [Nat.of_num_uint] of their decimal digits. *)
 Axiom kernel_config :
   0 < HART_CNT ∧
   0 < PROC_CNT ∧
