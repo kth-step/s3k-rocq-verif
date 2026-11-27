@@ -42,37 +42,54 @@ Axiom kernel_config :
 
 Lemma hart_cnt_0_gt : 0 < HART_CNT.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma proc_cnt_0_gt : 0 < PROC_CNT.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma mon_tbl_sz_0_gt : 0 < MON_TBL_SZ.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma tsl_tbl_sz_0_gt : 0 < TSL_TBL_SZ.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma mem_tbl_sz_0_gt : 0 < MEM_TBL_SZ.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma tslot_cnt_0_gt : 0 < TSLOT_CNT.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma hart_cnt_le_65536 : HART_CNT ≤ Z.to_nat 65536.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma proc_cnt_le_65535 : PROC_CNT ≤ Z.to_nat 65535.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma mon_tbl_sz_le_65535 : MON_TBL_SZ ≤ Z.to_nat 65535.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma tsl_tbl_sz_le_65535 : TSL_TBL_SZ ≤ Z.to_nat 65535.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma mem_tbl_sz_le_65535 : MEM_TBL_SZ ≤ Z.to_nat 65535.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma tslot_cnt_le_65535 : TSLOT_CNT ≤ Z.to_nat 65535.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma wcet_syscall_0_gt : 0 < WCET_SYSCALL.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma wcet_yield_0_gt : 0 < WCET_YIELD.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma wcet_sched_0_gt : 0 < WCET_SCHED.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma wcet_syscall_yield_lt_padding : WCET_SYSCALL + WCET_YIELD < PADDING.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma padding_wcet_sched_lt_slot_len : PADDING + WCET_SCHED < SLOT_LEN.
 Proof. pose proof kernel_config. lia. Qed.
+
 Lemma slot_len_0_gt : 0 < SLOT_LEN.
 Proof. pose proof kernel_config. lia. Qed.
